@@ -1,0 +1,5 @@
+device: emulator-5554
+loggerLevel: INFO
+accounts:
+  - extertena
+  - plawast

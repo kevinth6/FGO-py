@@ -2,3 +2,5 @@ airtest
 PyQt6
 Flask
 tqdm
+pyreadline
+PyYaml

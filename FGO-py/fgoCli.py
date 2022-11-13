@@ -4,6 +4,7 @@ import fgoKernel
 from functools import wraps
 from fgoLogging import getLogger,color
 from fgoTeamupParser import IniParser
+from tksMain import TksMain
 logger=getLogger('Cli')
 
 def wrapTry(func):
@@ -23,6 +24,7 @@ def countdown(x):
         time.sleep(min(1,rest))
     print('        ',end=' \r')
 
+
 class Cmd(cmd.Cmd,metaclass=lambda name,bases,attrs:type(name,bases,{i:wrapTry(j)if i.startswith('do_')else j for i,j in attrs.items()})):
     intro=f'''
 FGO-py {fgoKernel.__version__}, Copyright (c) 2019-2022 hgjazhgj
@@ -32,6 +34,7 @@ Type help or ? to list commands, help <command> to get more information.
 Some commands support <command> [<subcommand> ...] {{-h, --help}} for further information.
 '''
     prompt='FGO-py\033[32m@Device\033[36m(Team)\033[0m> '
+
     def __init__(self,config):
         super().__init__()
         fgoDevice.Device.enumDevices()
@@ -213,6 +216,10 @@ Some commands support <command> [<subcommand> ...] {{-h, --help}} for further in
         assert arg.unlock or not fgoKernel.lock.locked()
         if arg.unlock:fgoKernel.lock.release()
         else:fgoKernel.lock.acquire()
+    def do_tks(self,line):
+        TksMain(line.split())()
+    def complete_tks(self,text,line,begidx,endidx):
+        return self.completecommands(TksMain.complete_table,text,line,begidx,endidx)
 
 ArgError=type('ArgError',(Exception,),{})
 def validator(type,func,desc='\b'):
