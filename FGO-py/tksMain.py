@@ -1,9 +1,10 @@
 import argparse, cv2
 from fgoLogging import getLogger
 from tksDetect import TksDetect, INTERFACES
-import fgoDevice
+import fgoDevice, fgoSchedule
 from fgoDetect import Detect, IMG
 from tksCommon import TksCommon
+from tksAccounts import TksAccounts
 
 logger = getLogger('TksMain')
 
@@ -13,6 +14,7 @@ class TksMain:
     def __init__(self, args, config):
         self.args = TksMain.parser_tks.parse_args(args)
         self.config = config
+        assert fgoDevice.device.available
 
     def __call__(self):
         assert fgoDevice.device.available
@@ -24,7 +26,8 @@ class TksMain:
 
     def do_test(self):
         """for test"""
-        TksCommon(self.config).back_to_menu()
+        #TksAccounts(self.config, TksCommon(self.config)).rotate_all_accounts()
+        TksCommon(self.config).close_all_dialogs()
 
     parser_tks = argparse.ArgumentParser(prog='tks', description='Tulkas Extensions for FGO-py')
     parser_tks_ = parser_tks.add_subparsers(title='tkssubcmd', required=True, dest='subcmd')

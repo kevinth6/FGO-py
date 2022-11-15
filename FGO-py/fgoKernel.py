@@ -84,7 +84,8 @@ class Farming:
                 time.sleep(.5)
         # if(t:=XDetect().findLastExec())is not None:fgoDevice.device.touch((t[0]-98,t[1]-49))
 farming=Farming()
-threading.Thread(target=farming,daemon=True,name='Farming').start()
+# [Tulkas] disable farming thread. should be handled in the campaign flow
+#threading.Thread(target=farming,daemon=True,name='Farming').start()
 @withLock(lock)
 def gacha():
     while fuse.value<30:
