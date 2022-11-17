@@ -38,7 +38,7 @@ class XDetect(metaclass=logMeta(logger)):
             def wrap(self,*args,**kwargs):
                 try:return func(self,*args,**kwargs)
                 except err:pass
-                logger.warning(f'Retry {getattr(func,"__qualname__",func)}({",".join(repr(i)for i in args)}{","if kwargs else""}{",".join("%s=%r"%i for i in kwargs.items())})')
+                logger.warning(f'Error {str(err)}. Retry {getattr(func,"__qualname__",func)}({",".join(repr(i)for i in args)}{","if kwargs else""}{",".join("%s=%r"%i for i in kwargs.items())})')
                 return wrap(type(self)(),*args,**kwargs)
             return wrap
         return wrapper

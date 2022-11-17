@@ -9,9 +9,15 @@ logger = getLogger('TksCommon')
 FlowException = type('FlowException', (Exception,), {})
 
 
+def save_get(dict, name):
+    return dict[name] if name in dict else None
+
+
 class TksCommon:
-    def __init__(self, config):
-        self.config = config
+    def click(self, pos, after_delay=0.3):
+        device.touch(pos)
+        schedule.sleep(after_delay)
+        return self
 
     def wait(self, img, rect=(0, 0, 1280, 720), threshold=.05, interval=.3):
         while not TksDetect().appear(img, rect, threshold):
@@ -38,17 +44,16 @@ class TksCommon:
 
     def back_to_top(self):
         """Get back to the interface that contains the menu on the bottom"""
-        logger.info('Back to menu')
-        while not TksDetect().isMainInterface():
+        logger.info('Back to top')
+        while not (TksDetect().appear_btn(B_TOP_NOTICE) and TksDetect.cache.isMainInterface()):
             t = TksDetect.cache
-            if t.appear_btn(NOTICE):
-                t.click(P_NOTICE_CLOSE)
-            elif t.find_and_click_btn(MAIN_TL_CLOSE) \
-                    or t.find_and_click_btn(MAIN_MENU_CLOSE) \
+            if t.find_and_click_btn(B_MAIN_TL_CLOSE) \
+                    or t.find_and_click_btn(B_MAIN_MENU_CLOSE) \
+                    or t.find_and_click(IMG.TKS_BACK_MGMT, A_TL_BUTTONS) \
                     or t.find_and_click(IMG.TKS_CROSS, A_FULL_DIALOG_CROSS):
                 pass
             else:
-                t.device.perform('\xBB\x08', (200, 200))
+                t.device.perform('\xBB', (200,))
             fgoSchedule.schedule.sleep(.5)
         return self
 
@@ -58,53 +63,87 @@ class TksCommon:
         if not TksDetect.cache:
             TksDetect()
 
-        TksDetect.cache.click(P_MAIN_MENU, 0.3)
-        self.wait_btn(MAIN_MENU_CLOSE)
+        TksDetect.cache.click(P_MAIN_MENU, .5)
+        self.wait_btn(B_MAIN_MENU_CLOSE)
         fgoDevice.device.touch(menu_pos)
 
+        schedule.sleep(.5)
         while not TksDetect().isMainInterface():
-            if TksDetect.cache.find_and_click_btn(MAIN_MENU_CLOSE):
+            if TksDetect.cache.find_and_click_btn(B_MAIN_MENU_CLOSE):
                 break
-            schedule.sleep(0.3)
+            schedule.sleep(.5)
 
         return self
 
-    def swipe_and_click_sub_menu(self, img, max_swipe=20):
-        """You must guarantee the menu exists, otherwise Exception thrown."""
+    def scroll_and_find(self, img, area, end_pos=P_RIGHT_SCROLL_END, max_swipe=20):
         for i in range(max_swipe):
-            if s := TksDetect().find_and_click(img, A_SUB_MENUS):
+            if (s := TksDetect().find(img, area)) \
+                    or TksDetect.cache.is_list_end(end_pos):
                 break
-            fgoDevice.device.swipe(P_SUBMENU_SWIPE_START + P_SUBMENU_SWIPE_END)
+            fgoDevice.device.swipe(A_SWIPE_RIGHT_DOWN)
             schedule.sleep(0.3)
 
-        if not s:
-            raise FlowException("Can find the menu")
+        return s
 
-        return self
+    def scroll_and_click(self, img, area, end_pos=P_RIGHT_SCROLL_END, max_swipe=20):
+        """You must guarantee the menu exists, otherwise Exception thrown."""
+        if s := self.scroll_and_find(img, area, end_pos, max_swipe):
+            TksDetect.cache.click(s)
+            return self
+        else:
+            raise FlowException("Can't find the target to click, area " + str(area))
+
+    def find_and_click_dialog_close(self, detect):
+        if p := detect.find(IMG.TKS_DIALOG_CLOSE, A_DIALOG_BUTTONS) \
+                or detect.find(IMG.TKS_DIALOG_CLOSE2, A_DIALOG_BUTTONS):
+            logger.info("Dialog found with close button")
+            detect.click(p)
+            return True
+        elif p := detect.find(IMG.TKS_CROSS, A_FULL_DIALOG_CROSS):
+            logger.info("Dialog found with cross button")
+            detect.click(p)
+            return True
+        elif p := detect.find(IMG.TKS_DIALOG_FORWARD, A_FULL_DIALOG_CONFIRM):
+            logger.info("Dialog found with forward button")
+            detect.click(p)
+            return True
+        elif detect.appear_btn(B_NOTICE):
+            logger.info("Notice dialog found")
+            detect.click(P_NOTICE_CLOSE)
+            return True
+        else:
+            return False
 
     def close_all_dialogs(self, check_times=3):
         """Guarantee all the dialogs are closed, try to click the button with button_img,
-        exit if not finding the button for 3 times."""
+        exit if not finding the button for 3 times. until_func accepts a TksDetection and return bool"""
         logger.info("Closing all Dialogs")
         i = 0
         while i < check_times:
+            schedule.sleep(1)
             t = TksDetect().cache
-            if p := t.find(IMG.TKS_DIALOG_CLOSE, A_DIALOG_BUTTONS) \
-                    or t.find(IMG.TKS_DIALOG_CLOSE2, A_DIALOG_BUTTONS):
-                logger.info("Dialog found with close button")
-                t.click(p)
-            elif p := t.find(IMG.TKS_CROSS, A_FULL_DIALOG_CROSS):
-                logger.info("Dialog found with cross button")
-                t.click(p)
-            elif p := t.find(IMG.TKS_DIALOG_FORWARD, A_FULL_DIALOG_CONFIRM):
-                logger.info("Dialog found with forward button")
-                t.click(p)
+            if self.find_and_click_dialog_close(t):
+                pass
             elif t.isMainInterface():
                 i = i + 1
             else:
                 fgoDevice.device.press('\xBB')
-            schedule.sleep(.8)
+
         logger.info("Finish closing Dialogs")
+        return self
+
+        while True:
+            schedule.sleep(.8)
+            t = TksDetect().cache
+            if until_func(t):
+                break
+            elif self.find_and_click_dialog_close(t):
+                pass
+            else:
+                fgoDevice.device.press('\xBB')
+
+        logger.info("Finish closing Dialogs")
+        return self
 
     def wait_for_main_interface(self, interval=.3):
         while not TksDetect().isMainInterface():

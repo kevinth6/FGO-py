@@ -1,13 +1,11 @@
 import os, cv2, numpy
-from fgoDetect import XDetect, coroutine
+from fgoDetect import XDetect, coroutine, IMG
 from fgoSchedule import schedule
 from fgoFuse import fuse
 from fgoDevice import device
 
 # Extension of fgoDetect.
-# Add detection supported by the images in the interface folder
-# images in the interface folder is usually a screenshot or part of screenshot which contains multiple resources,
-# not just as a single icon.
+# Add detection supported by the images in the interface, accounts, and instance folder
 # FGO-ExpBall - fgoDetect merged.
 
 INTERFACES = {
@@ -27,14 +25,14 @@ INSTANCES = {}
 for i in os.listdir('fgoImage/instance'):
     if not os.path.isdir('fgoImage/instance/' + i):
         continue
-    INSTANCES[i] = {'chapters': {}, 'sections': {}, 'instances': {}}
+    INSTANCES[i] = {'menus': {}, 'sections': {}, 'instances': {}}
     for j in os.listdir('fgoImage/instance/' + i):
         if not j.endswith('.png'):
             continue
         img = (lambda x: (x[..., :3], x[..., 3]))(cv2.imread(f'fgoImage/instance/{i}/{j}', cv2.IMREAD_UNCHANGED))
         j = j[:-4]
-        if j.startswith('chapter_'):
-            INSTANCES[i]['chapters'][j[8:]] = img
+        if j.startswith('menu_'):
+            INSTANCES[i]['menus'][j[5:]] = img
         if j.startswith('section_'):
             INSTANCES[i]['sections'][j[8:]] = img
         elif j.startswith('instance_'):
@@ -59,27 +57,17 @@ class Button:
         return result
 
 
-STUCK_MISSES = 100
-StuckException = type('StuckException', (Exception,), {})
-
-
 class TksDetect(XDetect):
-    # count for a recoverable stuck. the max misses should be less than fuse
-    misses = 0
 
-    def __init__(self, ante_latency=.1, post_latency=0):
+    def __init__(self, ante_latency=.1, post_latency=.1):
         schedule.sleep(ante_latency)
         super().__init__()
-        TksDetect.misses = TksDetect.misses + 1
-        if TksDetect.misses > STUCK_MISSES:
-            raise StuckException()
         fuse.increase()
         schedule.sleep(post_latency)
         self.device = device
 
     def _compare(self, *args, **kwargs):
         if super()._compare(*args, **kwargs):
-            TksDetect.misses = 0
             fuse.reset(self)
             return True
         else:
@@ -87,7 +75,6 @@ class TksDetect(XDetect):
 
     def _find(self, *args, **kwargs):
         if (t := super()._find(*args, **kwargs)) is not None:
-            TksDetect.misses = 0
             fuse.reset(self)
         return t
 
@@ -97,7 +84,6 @@ class TksDetect(XDetect):
         p = yield None
         while True:
             if t := inner.send(p):
-                TksDetect.misses = 0
                 fuse.reset(self)
             p = yield t
 
@@ -131,7 +117,10 @@ class TksDetect(XDetect):
         return self.find_and_click(button.img, button.rect, button.threshold, after_delay, retry)
 
     def is_on_top(self):
-        return self.appear_btn(TOP_NOTICE)
+        return self.appear_btn(B_TOP_NOTICE)
+
+    def is_list_end(self, pos):
+        return self.appear(IMG.LISTBAR, (pos[0] - 19, 0, pos[0] + 19, 720)) and super()._isListEnd(pos)
 
 
 # buttons borrowed from FGO-ExpBall
@@ -182,21 +171,38 @@ P_ARCHIVE_SUBMIT = (836, 602)
 P_ARCHIVE_RESULT = (637, 602)
 
 # Buttons created
-MAIN_TL_CLOSE = Button((88, 42), 'main', (55, 13))
-TOP_NOTICE = Button((88, 42), 'top_interface', (55, 13))
-MAIN_MENU_CLOSE = Button((1186, 475), 'main', (83, 23))
-NOTICE = Button((636, 36), 'notice', (89, 17))
+B_MAIN_TL_CLOSE = Button((88, 42), 'main', (55, 13))
+B_TOP_NOTICE = Button((88, 42), 'top_interface', (55, 13))
+B_MAIN_MENU_CLOSE = Button((1186, 475), 'main', (83, 23))
+B_FRIEND_TL_BACK = Button((88, 42), 'friend_formation', (55, 13))
+B_NOTICE = Button((636, 36), 'notice', (89, 17))
+
 P_NOTICE_CLOSE = (1242, 36)
 P_MAIN_MENU = (1186, 652)
 P_MENU_ROOM = (1142, 602)
 P_MENU_ENHANCE = (475, 602)
-P_SUBMENU_SWIPE_START = (950, 600)
-P_SUBMENU_SWIPE_END = (950, 200)
+P_RIGHT_SCROLL_END = (1257, 590)
+P_BATTLE_OPTION = (1194, 200)
+P_BATTLE_OPTION_CLOSE = (1105, 165)
+P_BATTLE_ATTACK = (1154, 626)
+P_BATTLE_SPEED = (1130, 62)
+P_BATTLE_BACK = (1200, 682)
+P_FAIL_CLOSE = (645, 562)
+P_CONTRACT_AGREE = (712, 455)
 
 # Areas
 A_SUB_MENUS = (678, 108, 1278, 566)
+A_TL_BUTTONS = (8, 8, 240, 120)
+A_INSTANCE_MENUS = (614, 90, 1240, 600)
 A_DIALOG_BUTTONS = (156, 360, 1080, 660)
 A_FULL_DIALOG_CONFIRM = (964, 580, 1266, 704)
 A_FULL_DIALOG_CROSS = (1064, 4, 1272, 200)
 A_LOGIN_BOX = (456, 208, 820, 542)
 A_LIST_BAR = (1220, 90, 1276, 610)
+A_SWIPE_CENTER_DOWN = (640, 600, 640, 200)
+A_SWIPE_CENTER_UP = (640, 600, 640, 200)
+A_SWIPE_RIGHT_DOWN = (950, 600, 950, 200)
+A_BATTLE_OPTIONS = (656, 198, 1130, 488)
+A_BATTLE_CMD = (1010, 500, 1276, 714)
+A_TOP_RIGHT = (1008, 2, 1278, 75)
+A_CONTRACT_TITLE = (576, 200, 692, 242)

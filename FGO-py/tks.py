@@ -12,6 +12,7 @@ args = sys.argv[1:]
 
 if 'loggerLevel' in tksConfig:
     fgoLogging.logger.handlers[-1].setLevel(tksConfig['loggerLevel'])
+    fgoLogging.logger.root.handlers[-1].setLevel(tksConfig['loggerLevel'])
 
 if 'device' in tksConfig:
     fgoDevice.device = fgoDevice.Device(tksConfig['device'])
