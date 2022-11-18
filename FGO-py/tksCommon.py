@@ -45,16 +45,18 @@ class TksCommon:
     def back_to_top(self):
         """Get back to the interface that contains the menu on the bottom"""
         logger.info('Back to top')
-        while not (TksDetect().appear_btn(B_TOP_NOTICE) and TksDetect.cache.isMainInterface()):
+        while not (TksDetect().appear_btn(B_TOP_NOTICE)
+                   and TksDetect.cache.isMainInterface()
+                   and TksDetect.cache.appear(IMG.LISTBAR, A_LIST_BAR)):
             t = TksDetect.cache
             if t.find_and_click_btn(B_MAIN_TL_CLOSE) \
                     or t.find_and_click_btn(B_MAIN_MENU_CLOSE) \
-                    or t.find_and_click(IMG.TKS_BACK_MGMT, A_TL_BUTTONS) \
-                    or t.find_and_click(IMG.TKS_CROSS, A_FULL_DIALOG_CROSS):
+                    or t.find_and_click(IMG.TKS_BACK_MGMT, A_TL_BUTTONS):
                 pass
             else:
                 t.device.perform('\xBB', (200,))
             fgoSchedule.schedule.sleep(.5)
+        TksDetect.cache.click(P_SCROLL_TOP, after_delay=.5)
         return self
 
     def go_menu(self, menu_pos):
@@ -93,26 +95,22 @@ class TksCommon:
         else:
             raise FlowException("Can't find the target to click, area " + str(area))
 
-    def find_and_click_dialog_close(self, detect):
+    def find_dialog_close(self, detect):
         if p := detect.find(IMG.TKS_DIALOG_CLOSE, A_DIALOG_BUTTONS) \
                 or detect.find(IMG.TKS_DIALOG_CLOSE2, A_DIALOG_BUTTONS):
             logger.info("Dialog found with close button")
-            detect.click(p)
-            return True
+            return p
         elif p := detect.find(IMG.TKS_CROSS, A_FULL_DIALOG_CROSS):
             logger.info("Dialog found with cross button")
-            detect.click(p)
-            return True
+            return p
         elif p := detect.find(IMG.TKS_DIALOG_FORWARD, A_FULL_DIALOG_CONFIRM):
             logger.info("Dialog found with forward button")
-            detect.click(p)
-            return True
+            return p
         elif detect.appear_btn(B_NOTICE):
             logger.info("Notice dialog found")
-            detect.click(P_NOTICE_CLOSE)
-            return True
+            return P_NOTICE_CLOSE
         else:
-            return False
+            return None
 
     def close_all_dialogs(self, check_times=3):
         """Guarantee all the dialogs are closed, try to click the button with button_img,
@@ -122,8 +120,8 @@ class TksCommon:
         while i < check_times:
             schedule.sleep(1)
             t = TksDetect().cache
-            if self.find_and_click_dialog_close(t):
-                pass
+            if p := self.find_dialog_close(t):
+                t.click(p)
             elif t.isMainInterface():
                 i = i + 1
             else:
@@ -132,23 +130,22 @@ class TksCommon:
         logger.info("Finish closing Dialogs")
         return self
 
-        while True:
-            schedule.sleep(.8)
-            t = TksDetect().cache
-            if until_func(t):
-                break
-            elif self.find_and_click_dialog_close(t):
-                pass
-            else:
-                fgoDevice.device.press('\xBB')
-
-        logger.info("Finish closing Dialogs")
-        return self
-
-    def wait_for_main_interface(self, interval=.3):
+    def wait_for_main_interface(self, interval=.5):
         while not TksDetect().isMainInterface():
             schedule.sleep(interval)
         return self
 
-    def wait_for_submenu(self, interval=.3):
-        return self.wait(IMG.LISTBAR, A_LIST_BAR)
+    def wait_for_submenu(self, interval=.5):
+        while not (TksDetect().is_on_menu() and TksDetect.cache.appear(IMG.LISTBAR, A_LIST_BAR)):
+            schedule.sleep(interval)
+        return self
+
+    def skip_possible_story(self):
+        # try to skip story
+        fgoDevice.device.perform('\x08', (500,))
+        t = TksDetect(.3, .8).cache
+        if p := t.find(IMG.TKS_SKIP_YES, A_DIALOG_BUTTONS):
+            logger.info('skip main story')
+            t.click(p)
+            return True
+        return False

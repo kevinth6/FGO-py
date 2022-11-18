@@ -1,4 +1,4 @@
-import os, cv2, numpy
+import os, time, cv2, numpy, tqdm
 from fgoDetect import XDetect, coroutine, IMG
 from fgoSchedule import schedule
 from fgoFuse import fuse
@@ -96,6 +96,16 @@ class TksDetect(XDetect):
     def find(self, img, rect=(0, 0, 1280, 720), threshold=.05):
         return super()._find(img, rect, threshold)
 
+    def find_multiple(self, img, rect=(0, 0, 1280, 720), threshold=.05):
+        num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
+            (cv2.matchTemplate(self._crop(rect), img[0], cv2.TM_SQDIFF_NORMED, mask=img[1]) < threshold).astype(
+                numpy.uint8))
+        ret = []
+        for i in range(num_labels - 1):
+            ret.append(
+                (stats[i + 1][0] + int(img[0].shape[1] / 2), stats[i + 1][1] + int(img[0].shape[0] / 2)))
+        return ret
+
     def find_btn(self, button):
         return self.find(button.img, button.rect, button.threshold)
 
@@ -118,6 +128,12 @@ class TksDetect(XDetect):
 
     def is_on_top(self):
         return self.appear_btn(B_TOP_NOTICE)
+
+    def is_on_map(self):
+        return self.appear(IMG.TKS_BACK_MGMT, A_TL_BUTTONS)
+
+    def is_on_menu(self):
+        return self.appear_btn(B_MAIN_TL_CLOSE)
 
     def is_list_end(self, pos):
         return self.appear(IMG.LISTBAR, (pos[0] - 19, 0, pos[0] + 19, 720)) and super()._isListEnd(pos)
@@ -178,6 +194,7 @@ B_FRIEND_TL_BACK = Button((88, 42), 'friend_formation', (55, 13))
 B_NOTICE = Button((636, 36), 'notice', (89, 17))
 
 P_NOTICE_CLOSE = (1242, 36)
+P_TL_BUTTON = (95, 42)
 P_MAIN_MENU = (1186, 652)
 P_MENU_ROOM = (1142, 602)
 P_MENU_ENHANCE = (475, 602)
@@ -189,11 +206,14 @@ P_BATTLE_SPEED = (1130, 62)
 P_BATTLE_BACK = (1200, 682)
 P_FAIL_CLOSE = (645, 562)
 P_CONTRACT_AGREE = (712, 455)
+P_SCROLL_TOP = (1256, 98)
+P_CUR_CAMPAIGN = (932, 378)
 
 # Areas
 A_SUB_MENUS = (678, 108, 1278, 566)
 A_TL_BUTTONS = (8, 8, 240, 120)
 A_INSTANCE_MENUS = (614, 90, 1240, 600)
+A_INSTANCE_MENUS_RIGHT = (1020, 90, 1240, 600)
 A_DIALOG_BUTTONS = (156, 360, 1080, 660)
 A_FULL_DIALOG_CONFIRM = (964, 580, 1266, 704)
 A_FULL_DIALOG_CROSS = (1064, 4, 1272, 200)

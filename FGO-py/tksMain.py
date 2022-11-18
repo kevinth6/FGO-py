@@ -1,12 +1,16 @@
 import argparse, cv2
+import random
+
 from fgoLogging import getLogger
 from tksDetect import *
 import fgoDevice, fgoSchedule
 from fgoDetect import Detect, IMG
-from tksCommon import TksCommon, save_get
+from tksCommon import TksCommon, save_get, FlowException
 from tksInterface import TksInterface
 from tksContext import TksContext, TksJobContext
 from tksBattle import TksBattle, TksBattleGroup
+from fgoFuse import StuckException
+from tksCampaign import TksCampaign
 
 logger = getLogger('TksMain')
 
@@ -54,7 +58,13 @@ class TksMain:
         # TksInterface(context).go_free_instance('campaign_20221103', '90', None)
         # TksBattleGroup(context)()
         # TksCommon(self.config).scroll_and_click(IMG.TKS_FREE_DONE, A_INSTANCE_MENUS)
-        self.do_run()
+        self._cleanup()
+        context = TksContext(self.config, 'militaoccasi')
+        context.current_job = 'campaign_cur'
+        TksCommon().back_to_top()
+        TksCampaign(context)()
+
+        #self.do_run()
 
     def do_run(self):
         """main run entry"""
@@ -66,10 +76,16 @@ class TksMain:
             for job_name in context.job_names:
                 logger.info("run job " + job_name)
                 context.current_job = job_name
-                getattr(self, f'run_{context.job_configs[job_name]["type"]}')(context)
+                try:
+                    getattr(self, f'run_{context.job_configs[job_name]["type"]}')(context)
+                except (StuckException, FlowException) as ex:
+                    logger.error('Exception caught, ' + str(ex))
+                    logger.info('Cleanup and continue next job')
+                    self._cleanup()
 
     def run_free(self, context):
         cjc = context.cur_job_config()
+        TksCommon().back_to_top()
         TksInterface(context).go_free_instance(save_get(cjc, 'chapter'), save_get(cjc, 'section'),
                                                save_get(cjc, 'instance'))
         TksBattleGroup(context)()

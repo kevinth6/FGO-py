@@ -52,11 +52,11 @@ class TksBattleGroup:
     def __call__(self, check_options=True):
         logger.info('enter battle group')
         while True:
-            if not self.before_battle():
+            if not self._before_battle():
                 logger.info("can't enter battle, exit battle group")
                 break
             battle = TksBattle(self.context)
-            self.after_battle(battle(), battle.result)
+            self._after_battle(battle(), battle.result)
             if self.run_once:
                 logger.info('run once done. exit battle group ')
                 break
@@ -75,34 +75,41 @@ class TksBattleGroup:
             elif t.isSpecialDropSuspended():
                 logger.info('special drop suspended')
                 fgoDevice.device.perform('\x1B', (500,))
-            elif self.common.find_and_click_dialog_close(t):
-                pass
+            elif p := self.common.find_dialog_close(t):
+                t.click(p)
             else:
                 fgoDevice.device.press(' ', (600,))
 
-    def before_battle(self):
+    def _before_battle(self):
         while True:
-            if TksDetect(1, .7).appear(IMG.TKS_CHOOSE_FRIEND, A_TOP_RIGHT):
-                logger.info('choose friend. ')
-                self.choose_friend()
-                # could enter the battle directly if it's in battle continue
-            elif TksDetect.cache.isBattleBegin():
-                self.choose_team()
-                fgoDevice.device.perform(' ', (5000,))
-            elif TksDetect.cache.isApEmpty():
+            t = TksDetect(.8, .8).cache
+            if t.isTurnBegin():
+                logger.info('turn begin')
+                break
+            elif t.isApEmpty():
                 logger.info('AP empty.')
                 if not self.eat_apple():
                     return False
-            elif TksDetect.cache.isAddFriend():
+            elif t.isAddFriend():
                 logger.info('add friend')
                 fgoDevice.device.perform('X', (300,))
-            elif TksDetect.cache.isTurnBegin():
-                logger.info('turn begin')
-                break
+            elif p := t.find(IMG.TKS_DIALOG_CLOSE2, A_DIALOG_BUTTONS):
+                # could be friend constraint confirm
+                logger.info('Dialog pops up. click close')
+                t.click(p)
+            elif t.appear(IMG.TKS_CHOOSE_FRIEND, A_TOP_RIGHT):
+                logger.info('choose friend. ')
+                self.choose_friend()
+                # could enter the battle directly if it's in battle continue
+            elif t.appear(IMG.TKS_TEAM_CONFIRM, A_TOP_RIGHT):
+                self.choose_team()
+                fgoDevice.device.perform(' ', (5000,))
+            else:
+                self.common.skip_possible_story()
             fgoDevice.device.press('\xBB')
         return True
 
-    def after_battle(self, completed, result):
+    def _after_battle(self, completed, result):
         if completed:
             logger.info('battle completed. result ' + str(result))
             if result:

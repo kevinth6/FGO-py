@@ -102,9 +102,7 @@ class TksInterface:
         if not (chapter in INSTANCES):
             raise FlowException('Unknown chapter ' + chapter)
 
-        self.common.back_to_top()
-
-        for i in range(1, 4):
+        for i in range(1, 3):
             if str(i) in INSTANCES[chapter]['menus']:
                 logger.info(f'Go to chapter menu {i}')
                 self.common.wait_for_submenu()
