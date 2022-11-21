@@ -9,7 +9,7 @@ logger = getLogger('TksCommon')
 FlowException = type('FlowException', (Exception,), {})
 
 
-def save_get(dict, name):
+def safe_get(dict, name):
     return dict[name] if name in dict else None
 
 
@@ -56,7 +56,7 @@ class TksCommon:
             else:
                 t.device.perform('\xBB', (200,))
             fgoSchedule.schedule.sleep(.5)
-        TksDetect.cache.click(P_SCROLL_TOP, after_delay=.5)
+        self.click(P_SCROLL_TOP, after_delay=.5)
         return self
 
     def go_menu(self, menu_pos):
@@ -77,10 +77,8 @@ class TksCommon:
 
         return self
 
-    def scroll_and_find(self, img, area, end_pos=P_RIGHT_SCROLL_END, max_swipe=20):
-        return self.scroll_and_find_func(lambda t, i: t.find(img, area), end_pos, max_swipe)
-
-    def scroll_and_find_func(self, func, end_pos=P_RIGHT_SCROLL_END, max_swipe=20):
+    def scroll_and_find(self, func, end_pos=P_RIGHT_SCROLL_END, max_swipe=20, top_pos=P_SCROLL_TOP):
+        self.click(top_pos, after_delay=.5)
         for i in range(max_swipe):
             if (s := func(TksDetect(), i)) or TksDetect.cache.is_list_end(end_pos):
                 break
@@ -89,9 +87,9 @@ class TksCommon:
 
         return s
 
-    def scroll_and_click(self, img, area, end_pos=P_RIGHT_SCROLL_END, max_swipe=20):
+    def scroll_and_click(self, img, area, end_pos=P_RIGHT_SCROLL_END, max_swipe=20, top_pos=P_SCROLL_TOP):
         """You must guarantee the menu exists, otherwise Exception thrown."""
-        if s := self.scroll_and_find(img, area, end_pos, max_swipe):
+        if s := self.scroll_and_find(lambda t, i: t.find(img, area), end_pos, max_swipe, top_pos):
             TksDetect.cache.click(s)
             return self
         else:
@@ -145,10 +143,10 @@ class TksCommon:
         for i in range(max_times):
             self.click(pos, interval)
             if TksDetect().is_on_menu() and TksDetect.cache.appear(IMG.LISTBAR, A_LIST_BAR):
-                return True
+                return pos
             if move_step:
                 pos = (pos[0] + move_step[0], pos[1] + move_step[1])
-        return False
+        return None
 
     def skip_possible_story(self):
         # try to skip story
@@ -160,14 +158,17 @@ class TksCommon:
             return True
         return False
 
-    def handle_special_drop(self, detect, fav=True):
-        if detect.isSpecialDropSuspended():
+    def handle_special_drop(self, t, fav=True):
+        if t.isSpecialDropSuspended():
             logger.info('Special dropped.')
-            while fav and (p := detect.find(IMG.TKS_FAV, A_LEFT_BUTTONS, after_delay=.5)):
+            while fav and (p := t.find(IMG.TKS_FAV, A_LEFT_BUTTONS)):
                 logger.info('Mark special as fav.')
-                detect.click(p)
-                detect = TksDetect().cache
-        fgoDevice.device.perform('\x1B', (500,))
+                t.click(p)
+                t = TksDetect().cache
+            fgoDevice.device.perform('\x1B', (500,))
+            return True
+        else:
+            return False
 
     def eat_apple(self, context):
         job_context = context.cur_job_context()
@@ -189,6 +190,21 @@ class TksCommon:
         return True
 
     def swipe_on_map_and_do(self, func):
+        self._pinch_and_swipe_down()
+
+        i = 0
+        while True:
+            schedule.sleep(.5)
+            if ret := func(TksDetect(), i):
+                return ret
+            else:
+                i += 1
+                if i > 2:
+                    break
+                fgoDevice.device.swipe(A_SWIPE_CENTER_UP)
+        return None
+
+    def _pinch_and_swipe_down(self):
         schedule.sleep(1)
         fgoDevice.device.pinch()
         schedule.sleep(1)
@@ -200,14 +216,13 @@ class TksCommon:
         fgoDevice.device.swipe(A_SWIPE_CENTER_DOWN)
         schedule.sleep(1)
 
-        i = 0
-        while True:
+    def go_on_map_and_menu(self, map_screen, map_pos, menu_scroll, menu_pos):
+        self._pinch_and_swipe_down()
+        for i in range(map_screen):
+            fgoDevice.device.swipe(A_SWIPE_CENTER_UP)
+            schedule.sleep(1)
+        self.click_and_wait_for_menu_view(map_pos)
+        for i in range(menu_scroll):
+            fgoDevice.device.swipe(A_SWIPE_RIGHT_DOWN)
             schedule.sleep(.5)
-            if func(TksDetect(), i):
-                return True
-            else:
-                i += 1
-                if i > 2:
-                    break
-                fgoDevice.device.swipe(A_SWIPE_CENTER_UP)
-        return False
+        self.click(menu_pos, after_delay=.7)

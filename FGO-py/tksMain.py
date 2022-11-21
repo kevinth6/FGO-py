@@ -5,7 +5,7 @@ from fgoLogging import getLogger
 from tksDetect import *
 import fgoDevice, fgoSchedule
 from fgoDetect import Detect, IMG
-from tksCommon import TksCommon, save_get, FlowException
+from tksCommon import TksCommon, safe_get, FlowException
 from tksInterface import TksInterface
 from tksContext import TksContext, TksJobContext
 from tksBattle import TksBattle, TksBattleGroup, DefeatedException
@@ -29,10 +29,7 @@ class TksMain:
         assert fgoDevice.device.available
         while True:
             t = TksDetect().cache
-            if t.isMainInterface():
-                self.common.close_all_dialogs()
-                break
-            elif t.isTurnBegin():
+            if t.isTurnBegin():
                 logger.info('In battle, complete battle first')
                 TksBattleGroup(TksContext.anonymous_context(), run_once=True)()
             elif p := t.find(IMG.TKS_APP_ICON):
@@ -41,6 +38,13 @@ class TksMain:
             elif t.appear(IMG.TKS_CONTRACT, A_CONTRACT_TITLE):
                 logger.info('Click contract agree')
                 t.click(P_CONTRACT_AGREE)
+            elif t.find_and_click(IMG.TKS_LOGIN, A_LOGIN_BOX):
+                logger.info('Click login')
+            elif t.isMainInterface():
+                self.common.close_all_dialogs()
+                break
+            elif p := self.common.find_dialog_close(t):
+                t.click(p)
             else:
                 fgoDevice.device.perform('\xBB\x08', (200, 500))
             schedule.sleep(.5)
@@ -62,10 +66,14 @@ class TksMain:
         self._cleanup()
         context = TksContext(self.config, 'militaoccasi')
         context.current_job = 'campaign_cur'
-        TksCampaign(context)._run_first_free()
+        TksCommon().back_to_top()
+        TksCampaign(context)(skip_main=True, skip_first=True)
 
-        # assert fgoDevice.device.available
-        # print(TksDetect().find(CLASSES_S['assassin'], (1176, 100, 1231, 304)))
+        assert fgoDevice.device.available
+        # TksCommon().handle_special_drop(TksDetect())
+        # print(TksDetect().isAddFriend())
+        # for i in range(10):
+        #     print(TksDetect().find_multiple(IMG.TKS_CAMPAIGN_NEXT, threshold=0.2))
 
         # self.do_run()
 
@@ -82,8 +90,8 @@ class TksMain:
                 while times < 3:
                     try:
                         logger.info("run job " + job_name)
-                        if getattr(self, f'run_{context.job_configs[job_name]["type"]}')(context):
-                            break
+                        getattr(self, f'run_{context.job_configs[job_name]["type"]}')(context, times)
+                        break
                     except (StuckException, FlowException) as ex:
                         logger.error('Exception caught, ' + str(ex))
                         logger.info('Cleanup and continue')
@@ -96,12 +104,16 @@ class TksMain:
                 if times >= 3:
                     logger.error('Exception times exceed 3. Abandon this job, continue next')
 
-    def run_free(self, context):
+    def run_free(self, context, times):
         cjc = context.cur_job_config()
         TksCommon().back_to_top()
-        TksInterface(context).go_free_instance(save_get(cjc, 'chapter'), save_get(cjc, 'section'),
-                                               save_get(cjc, 'instance'))
-        TksBattleGroup(context)()
+        TksInterface(context).go_free_instance(safe_get(cjc, 'chapter'), safe_get(cjc, 'section'),
+                                               safe_get(cjc, 'instance'))
+        return TksBattleGroup(context)()
+
+    def run_campaign(self, context, times):
+        TksCommon().back_to_top()
+        return TksCampaign(context)(skip_main=times > 1)
 
     parser_tks = argparse.ArgumentParser(prog='tks', description='Tulkas Extensions for FGO-py')
     parser_tks_ = parser_tks.add_subparsers(title='tkssubcmd', required=True, dest='subcmd')

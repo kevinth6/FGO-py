@@ -110,6 +110,8 @@ class TksDetect(XDetect):
         for i in range(num_labels - 1):
             ret.append(
                 (stats[i + 1][0] + int(img[0].shape[1] / 2), stats[i + 1][1] + int(img[0].shape[0] / 2)))
+        if len(ret) > 0:
+            fuse.reset()
         return ret
 
     def find_btn(self, button):
@@ -209,6 +211,7 @@ B_MAIN_MENU_CLOSE = Button((1186, 475), 'main', (83, 23))
 B_FRIEND_TL_BACK = Button((88, 42), 'friend_formation', (55, 13))
 B_NOTICE = Button((636, 36), 'notice', (89, 17))
 
+P_CENTER = (640, 360)
 P_NOTICE_CLOSE = (1242, 36)
 P_TL_BUTTON = (95, 42)
 P_MAIN_MENU = (1186, 652)

@@ -6,7 +6,7 @@ import fgoSchedule
 from fgoDetect import IMG
 from fgoLogging import getLogger
 from tksDetect import *
-from tksCommon import TksCommon, FlowException
+from tksCommon import TksCommon, FlowException, safe_get
 from tksBattle import TksBattleGroup
 
 logger = getLogger('TksCampaign')
@@ -24,18 +24,31 @@ logger = getLogger('TksCampaign')
 
 
 class TksCampaign:
-    def __init__(self, context, include_main=True):
+    def __init__(self, context):
         self.common = TksCommon()
         self.context = context
         self.free_instances = []
         self.scanned_instances = []
 
-    def __call__(self):
+    def __call__(self, skip_main=False, skip_first=False):
         self.common.click(P_CUR_CAMPAIGN, after_delay=1)
-        if self.include_main:
+        cjc = self.context.cur_job_config()
+        if not skip_main:
+            skip_main = ('skipMain' in cjc) and cjc['skipMain']
+        ret = True
+        if not skip_main:
             ret = self._run_main_tasks()
-        if ret:
-            ret = self._run_first_free()
+        else:
+            logger.info('Main task skipped on required.')
+
+        if not skip_first:
+            skip_first = ('skiFirst' in cjc) and cjc['skiFirst']
+        if not skip_first:
+            if ret:
+                ret = self._run_first_free()
+        else:
+            logger.info('First free running skipped on required.')
+
         if ret:
             ret = self._run_regular_free()
         return ret
@@ -44,81 +57,186 @@ class TksCampaign:
         flag = 0b0000011
         logger.info('Main tasks running start')
         while True:
-            t = TksDetect(.5, .5).cache
-            if flag & 0x1 and t.is_on_map():
-                if p := t.find(IMG.TKS_REWARD_AVAILABLE, A_TOP_RIGHT, threshold=.02):
-                    logger.info('Found available rewards. Go to reward view.')
-                    t.click(p)
-                    flag = 0b00000100
-                elif len(ps := t.find_multiple(IMG.TKS_CAMPAIGN_NEXT, threshold=.1)) > 0:
-                    if self._iterate_map_tasks(ps):
-                        flag = 0b11011000
-                    else:
-                        logger.info('Iterated all tasks on map. Nothing to do.')
-                        if TksDetect().is_on_menu():
-                            self.common.click(P_TL_BUTTON)
-                        break
-            elif flag & 0x2 and t.is_on_menu():
-                if len(ps := t.find_multiple(IMG.TKS_CAMPAIGN_NEXT, threshold=.1)) > 0 \
-                        and self._iterate_menu_tasks(ps):
-                    flag = 0b11011000
-                else:
-                    logger.info("On menu but nothing to do. ")
-                    t.click(P_TL_BUTTON)
-                    flag = 0b00000001
-            elif flag & 0x4 and t.is_on_shop():
+            t = TksDetect(.3, .5).cache
+            if flag & 0x4 and t.is_on_shop():
                 self._handle_rewards()
                 flag = 0b00000001
             elif flag & 0x8 and t.appear(IMG.TKS_CHOOSE_FRIEND, A_TOP_RIGHT):
                 TksBattleGroup(self.context, True)()
                 flag = 0b10100111
-            elif flag & 0x10:
-                if p := t.find(IMG.TKS_CAMPAIGN_BEGIN, A_DIALOG_BUTTONS):
-                    logger.info('click task begin')
-                    t.click(p)
-                elif p := t.find(IMG.TKS_DIALOG_BEGIN, A_DIALOG_BUTTONS):
-                    logger.info('click begin')
-                    t.click(p)
+            elif flag & 0x10 and t.find_and_click(IMG.TKS_CAMPAIGN_BEGIN, A_DIALOG_BUTTONS):
+                logger.info('click task begin')
                 flag = 0b11111111
-            else:
-                flag = self._check_misc_flow(flag, t)
-                if not flag:
+            elif flag & 0x10 and t.find_and_click(IMG.TKS_DIALOG_BEGIN, A_DIALOG_BUTTONS):
+                logger.info('click begin')
+                flag = 0b11111111
+            elif flag & 0x40 and t.isApEmpty():
+                logger.info('AP empty.')
+                if not self.common.eat_apple(self.context):
+                    logger.info('Exit due to no AP.')
                     return False
+                else:
+                    flag = 0b11111111
+            elif flag & 0x20 and self.common.handle_special_drop(t):
+                flag = 0b10100111
+            elif p := self.common.find_dialog_close(t):
+                logger.info('close dialog on ' + str(p))
+                t.click(p)
+            elif flag & 0x1 and t.is_on_map():
+                if p := t.find(IMG.TKS_REWARD_AVAILABLE, A_TOP_RIGHT, threshold=.02):
+                    logger.info('Found available rewards. Go to reward view.')
+                    t.click(p)
+                    flag = 0b00000100
+                else:
+                    ret = self._iterate_map_tasks(t)
+                    if ret:
+                        flag = 0b00000100
+                    elif ret == False:
+                        break
+                    elif ret is None:
+                        # go back and forth to find the task
+                        if self._back_and_forth_find_task(t):
+                            flag = 0b00000100
+                        else:
+                            break
+            elif flag & 0x2 and t.is_on_menu():
+                if self._iterate_menu_tasks():
+                    flag = 0b11011000
+                else:
+                    logger.info("On menu but nothing to do. ")
+                    t.click(P_TL_BUTTON)
+                    flag = 0b00000011
+            elif t.is_on_top():
+                logger.info("Unexpected back to top. ")
+                return False
+            elif flag & 0x80 and (p := t.find(IMG.TKS_OPTION_STUCK)):
+                t.click(p)
+            elif flag & 0x80 and self.common.skip_possible_story():
+                flag = 0b10111111
+            else:
+                fgoDevice.device.perform('\xBB', (800,))
 
         logger.info('Main tasks running exit.')
         return True
 
-    def _check_misc_flow(self, flag, t):
-        if flag & 0x40 and t.isApEmpty():
-            logger.info('AP empty.')
-            if not self.common.eat_apple(self.context):
-                logger.info('Exit due to no AP.')
-                return None
-            else:
-                return 0b11111111
-        elif flag & 0x20:
-            if self.common.handle_special_drop(t):
-                return 0b10100111
-        elif p := self.common.find_dialog_close(t):
-            logger.info('close dialog on ' + str(p))
-            t.click(p)
-        elif t.is_on_top():
-            logger.info("Unexpected back to top. ")
-            return None
-        elif flag & 0x80 and self.common.skip_possible_story():
-            return 0b10111111
-        else:
-            fgoDevice.device.perform('\xBB', (800,))
-
-        return flag
-
     def _run_first_free(self):
-        self.scanned_instances.clear()
-        self.common.swipe_on_map_and_do(lambda t, st: self._scan_free(t, st, self._find_first_free))
-        print(len(self.free_instances))
+        logger.info('First free running start.')
+        ret = True
+        while True:
+            t = TksDetect().cache
+            if not t.is_on_map():
+                t.find_and_click_btn(B_MAIN_TL_CLOSE, after_delay=1)
+                continue
+            if instance := self.common.swipe_on_map_and_do(lambda t, st: self._scan_and_run_first_free(t, st)):
+                if not self._run_free_instance(instance, first=True):
+                    ret = False
+                    break
+            else:
+                ret = True
+                break
+        logger.info('First free running exit.')
+        return ret
 
     def _run_regular_free(self):
-        pass
+        logger.info('Regular free running start.')
+        self.scanned_instances.clear()
+        self.free_instances.clear()
+        while not TksDetect().is_on_map():
+            TksDetect().cache.find_and_click_btn(B_MAIN_TL_CLOSE, after_delay=1)
+
+        self.common.swipe_on_map_and_do(lambda t, st: self._scan_regular_free(t, st))
+        if len(self.free_instances) == 0:
+            logger.info('No regular free instance to run')
+            return True
+
+        ret = True
+        bak_instances = []
+        while True:
+            idx = random.randint(0, len(self.free_instances) - 1)
+            instance = self.free_instances.pop(idx)
+            bak_instances.append(instance)
+            logger.info(f'Run regular instance idx: {idx}, instance: {instance}')
+            if not self._run_regular_free_instance(instance):
+                ret = False
+                break
+
+            if len(self.free_instances) == 0:
+                self.free_instances = self.free_instances + bak_instances
+                bak_instances.clear()
+
+        logger.info('Regular free running exit.')
+        return ret
+
+    def _back_and_forth_find_task(self, t):
+        logger.info('Go back and forth to find a task')
+        self.common.back_to_top()
+        self.common.click(P_CUR_CAMPAIGN, after_delay=1)
+        while not TksDetect(.5, .5).is_on_map():
+            pass
+        schedule.sleep(1.5)
+        ret = self._iterate_map_tasks(t)
+        if ret:
+            return True
+        elif ret is None:
+            logger.info('Click center to find a task')
+            if self.common.click_and_wait_for_menu_view(P_CENTER, interval=.7, max_times=3):
+                if self.common.scroll_and_find(lambda t, i: self._iterate_menu_tasks()):
+                    return True
+                else:
+                    self.common.click(P_TL_BUTTON, 1)
+            else:
+                logger.info("Can't open section menu.")
+        return False
+
+    def _run_regular_free_instance(self, instance):
+        cf = self.context.cur_job_config()
+        if (('level' in cf) and cf['level'] != instance.level) \
+                or (('cls' in cf) and cf['cls'] != instance.cls):
+            logger.info(f'Instance not wanted. level:{instance.level}, cls:{instance.cls}')
+            return False
+        t = TksDetect().cache
+        if not t.is_on_map():
+            t.find_and_click_btn(B_MAIN_TL_CLOSE, after_delay=1)
+
+        logger.info(f'Go on map and menu. ')
+        self.common.go_on_map_and_menu(instance.map_screen, instance.map_pos, instance.menu_scroll,
+                                       instance.menu_pos)
+        if TksDetect().is_on_map():
+            logger.info("Still on map, unexpected. skip this instance.")
+            return False
+        return self._run_free_instance(instance)
+
+    def _run_free_instance(self, instance, first=False):
+        logger.info(f'Start free instance running. first:{first}, level:{instance.level}, cls:{instance.cls}')
+        flag = 0b11011000
+        while True:
+            t = TksDetect().cache
+            if flag & 0x8 and t.appear(IMG.TKS_CHOOSE_FRIEND, A_TOP_RIGHT):
+                TksBattleGroup(self.context, True)()
+                flag = 0b10100111
+            elif flag & 0x40 and t.isApEmpty():
+                logger.info('AP empty.')
+                if not self.common.eat_apple(self.context):
+                    logger.info('Exit due to no AP.')
+                    return False
+                else:
+                    flag = 0b11111111
+            elif flag & 0x20 and self.common.handle_special_drop(t):
+                flag = 0b10100111
+            elif p := self.common.find_dialog_close(t):
+                logger.info('close dialog on ' + str(p))
+                t.click(p)
+            elif flag & 0x1 and t.is_on_map():
+                logger.info('On map.')
+                return True
+            elif flag & 0x2 and t.is_on_menu():
+                logger.info('On menu, back')
+                self.common.click(P_TL_BUTTON)
+                flag = 0b00000011
+            elif flag & 0x80 and self.common.skip_possible_story():
+                flag = 0b10111111
+            else:
+                fgoDevice.device.perform('\xBB', (800,))
 
     def _click_task_in_menu(self, pos):
         # task could be unavailable due to the prerequisite not satisfied
@@ -127,31 +245,30 @@ class TksCampaign:
             fgoDevice.device.touch(self._clickable_pos_under_next(pos))
             schedule.sleep(.8)
             if not TksDetect().appear(IMG.TKS_CAMPAIGN_NEXT, a, threshold=.1):
-                TksDetect.cache.save()
-                print("True")
                 return True
         return False
 
     def _clickable_pos_under_next(self, pos):
         return pos[0], pos[1] + 80
 
-    def _iterate_map_tasks(self, ps):
+    def _iterate_map_tasks(self, t):
         logger.info('Iterate map tasks.')
-        idx = 0
-        while idx < len(ps):
-            logger.info(f'Pick task: {idx}, pos: {ps[idx]}')
-            pos = self._clickable_pos_under_next(ps[idx])
+        ps = t.find_multiple(IMG.TKS_CAMPAIGN_NEXT, threshold=.15)
+        logger.info(f'Tasks found: {len(ps)}')
+        if len(ps) == 0:
+            return None
+        for p in ps:
+            logger.info(f'Pick task: pos: {p}')
+            pos = self._clickable_pos_under_next(p)
             if self.common.click_and_wait_for_menu_view(pos, interval=.7):
-                if self.common.scroll_and_find_func(lambda t, i: self._iterate_menu_tasks()):
+                if self.common.scroll_and_find(lambda t, i: self._iterate_menu_tasks()):
                     return True
                 else:
                     self.common.click(P_TL_BUTTON, 1)
             else:
                 logger.info("Can't open section menu.")
-
-            idx += 1
-        if idx == len(ps):
-            return False
+        logger.info('Iterated all tasks on map.')
+        return False
 
     def _iterate_menu_tasks(self):
         logger.info('Iterate menu tasks.')
@@ -159,7 +276,7 @@ class TksCampaign:
         idx = 0
         while idx < len(ps):
             if self._click_task_in_menu(ps[idx]):
-                logger.info(f'Found runnable task: {idx}')
+                logger.info(f'Found runnable task, pos: {ps[idx]}')
                 return True
             else:
                 logger.info(f'No response after clicking task: {idx}')
@@ -177,6 +294,7 @@ class TksCampaign:
                     if p := t.find(IMG.TKS_REWARD_COMPLETED, A_CAMPAIGN_REWARD_1ST_READY):
                         logger.info('Find ready reward. Get it.')
                         t.click(p, after_delay=.7)
+                        t.click(P_CAMPAIGN_REWARD_VIEW, after_delay=.7)
                     else:
                         logger.info('No ready reward any more.')
                         t.click(P_TL_BUTTON, after_delay=.7)
@@ -190,32 +308,60 @@ class TksCampaign:
                 pass
             elif p := self.common.find_dialog_close(t):
                 t.click(p, after_delay=.7)
+            elif t.is_on_map() or t.is_on_top():
+                break
+            elif not t.is_on_shop():
+                logger.info('Not on shop, exit.')
+                t.click(P_TL_BUTTON, after_delay=.7)
             else:
-                fgoDevice.device.perform('\xBB', (700,))
+                t.click(P_CAMPAIGN_REWARD_VIEW, after_delay=.7)
 
-    def _scan_free(self, t, st, find_func):
+    def _scan_and_run_first_free(self, t, st):
         logger.info(f'iterate first free sections on map. screen: {st}')
         if len(ps := t.find_multiple(IMG.TKS_FREE_MARK_S, threshold=.1)) > 0:
             idx = 0
             while idx < len(ps):
                 logger.info(f'Find section: {idx}, pos: {ps[idx]}')
-                if self.common.click_and_wait_for_menu_view(ps[idx], (-20, 0)):
-                    func = (lambda t, i: find_func(t, st, ps[idx], i))
-                    self.common.scroll_and_find_func(func)
+                if rps := self.common.click_and_wait_for_menu_view(ps[idx], (-20, 0)):
+                    func = (lambda t, i: self._find_first_free(t, st, rps, i))
+                    if instance := self.common.scroll_and_find(func):
+                        self.common.click(instance.menu_pos, 1)
+                        return instance
+                    else:
+                        self.common.click(P_TL_BUTTON, 1)
+                else:
+                    logger.info("Can't open section menu.")
+                idx += 1
+
+    def _scan_regular_free(self, t, st):
+        logger.info(f'iterate first free sections on map. screen: {st}')
+        if len(ps := t.find_multiple(IMG.TKS_FREE_MARK_S, threshold=.1)) > 0:
+            idx = 0
+            while idx < len(ps):
+                logger.info(f'Find section: {idx}, pos: {ps[idx]}')
+                if rps := self.common.click_and_wait_for_menu_view(ps[idx], (-20, 0)):
+                    func = (lambda t, i: self._find_regular_free(t, st, rps, i))
+                    self.common.scroll_and_find(func)
                     self.common.click(P_TL_BUTTON, 1)
                 else:
                     logger.info("Can't open section menu.")
                 idx += 1
 
     def _find_first_free(self, t, map_screen, map_pos, menu_scroll):
+        return self._find_free_instance(t, IMG.TKS_INSTANCE_BRONZE, map_screen, map_pos, menu_scroll, 1, first=True) \
+               or self._find_free_instance(t, IMG.TKS_INSTANCE_SILVER, map_screen, map_pos, menu_scroll, 2, first=True) \
+               or self._find_free_instance(t, IMG.TKS_INSTANCE_GOLD, map_screen, map_pos, menu_scroll, 3, first=True)
+        # or = self._find_free_instance(t, IMG.TKS_INSTANCE_GREEN, map_screen, map_pos, menu_scroll, 4) or ret
+
+    def _find_regular_free(self, t, map_screen, map_pos, menu_scroll):
         ret = False
-        ret = self._find_free_instance(t, IMG.TKS_INSTANCE_BRONZE, map_screen, map_pos, menu_scroll, 1) or ret
-        ret = self._find_free_instance(t, IMG.TKS_INSTANCE_SILVER, map_screen, map_pos, menu_scroll, 2) or ret
-        ret = self._find_free_instance(t, IMG.TKS_INSTANCE_GOLD, map_screen, map_pos, menu_scroll, 3) or ret
+        # ret = self._find_free_instance(t, IMG.TKS_INSTANCE_BRONZE_DONE, map_screen, map_pos, menu_scroll, 1) or ret
+        ret = self._find_free_instance(t, IMG.TKS_INSTANCE_SILVER_DONE, map_screen, map_pos, menu_scroll, 2) or ret
+        ret = self._find_free_instance(t, IMG.TKS_INSTANCE_GOLD_DONE, map_screen, map_pos, menu_scroll, 3) or ret
         # ret = self._find_free_instance(t, IMG.TKS_INSTANCE_GREEN, map_screen, map_pos, menu_scroll, 4) or ret
         return ret
 
-    def _find_free_instance(self, t, img, map_screen, map_pos, menu_scroll, level):
+    def _find_free_instance(self, t, img, map_screen, map_pos, menu_scroll, level, first=False):
         for mp in t.find_multiple(img, A_CAMPAIGN_INSTANCE_REWARD):
             logger.info(f'Found instance in menu. level: {level}, scroll: {menu_scroll}, pos:{mp}')
             mp_ab = (mp[0] + A_CAMPAIGN_INSTANCE_REWARD[0], mp[1] + A_CAMPAIGN_INSTANCE_REWARD[1])
@@ -223,15 +369,18 @@ class TksCampaign:
             if self._instance_scanned(t, mp_ab, level, cls):
                 logger.info(f'Instance already scanned.')
             else:
-                instance = FreeInstance(map_screen, map_pos, menu_scroll, mp, level, cls)
-                self.free_instances.append(instance)
-                logger.info(f'Instance added {instance}')
-        return False
+                instance = FreeInstance(map_screen, map_pos, menu_scroll, mp_ab, level, cls)
+                if first:
+                    logger.info(f'Instance found: {instance}')
+                    return instance
+                else:
+                    logger.info(f'Instance added: {instance}')
+                    self.free_instances.append(instance)
 
     def _instance_scanned(self, t, new_pos, level, cls):
         rect = t.surround((new_pos[0] - 274, new_pos[1] - 61), 180, 20)
         for instance in self.scanned_instances:
-            if instance[1] == level and instance[2] == cls and t.appear(instance[0], t.expand(rect, 2), threshold=.003):
+            if instance[1] == level and instance[2] == cls and t.appear(instance[0], t.expand(rect, 2), threshold=.01):
                 return True
         self.scanned_instances.append(([t._crop(rect), None], level, cls))
         return False
@@ -240,7 +389,7 @@ class TksCampaign:
         area = (pos_reward[0] + 24, pos_reward[1] - 65, pos_reward[0] + 104, pos_reward[1] + 15)
         ret = None
         for cls in CLASSES_S:
-            if t.appear(CLASSES_S[cls], area):
+            if t.appear(CLASSES_S[cls], area, threshold=.1):
                 if ret:
                     # more than one class found
                     return None

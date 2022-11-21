@@ -7,7 +7,7 @@ logger=getLogger('Fuse')
 StuckException = type('StuckException', (Exception,), {})
 MAX_FUSE_TIME = 3
 class Fuse:
-    def __init__(self,fv=200,logsize=10):
+    def __init__(self,fv=120,logsize=10):
         self.value=0
         self.max=fv
         self.logsize=logsize
@@ -18,10 +18,11 @@ class Fuse:
         logger.debug(f'{self.value}')
         if self.value>self.max:
             self.fuse_time += 1
+            self.save()
             if self.fuse_time > MAX_FUSE_TIME:
-                self.save()
                 raise ScriptStop('Fused')
             else:
+                self.value = 0
                 raise StuckException(self.fuse_time)
         self.value+=1
     def reset(self,detect=None):

@@ -57,15 +57,21 @@ class TksBattleGroup:
         while True:
             if not self._before_battle():
                 logger.info("can't enter battle, exit battle group")
-                break
+                return False
             battle = TksBattle(self.context)
             self._after_battle(battle(), battle.result)
             if self.run_once:
                 logger.info('run once done. exit battle group ')
                 break
+        return True
 
     def choose_team(self):
-        team_index = (self.job_config['teamIndex']) if 'teamIndex' in self.job_config else 0
+        if 'teamIndex' in self.job_config:
+            team_index = (self.job_config['teamIndex'])
+        elif ('easyMode' in self.job_config) and self.job_config['easyMode']:
+            team_index = 2
+        else:
+            team_index = 1
         logger.info('choose team ' + str(team_index))
         if TksDetect.cache.getTeamIndex() != team_index:
             fgoDevice.device.perform('\x70\x71\x72\x73\x74\x75\x76\x77\x78\x79'[team_index], (1000,))
@@ -73,12 +79,17 @@ class TksBattleGroup:
     def battle_completed(self):
         while True:
             t = TksDetect().cache
-            if t.isBattleContinue() or t.isMainInterface():
+            if t.isBattleContinue():
                 break
             elif self.common.handle_special_drop(t):
                 pass
+            elif t.isAddFriend():
+                logger.info('add friend')
+                fgoDevice.device.perform('X', (300,))
             elif p := self.common.find_dialog_close(t):
                 t.click(p)
+            elif t.isMainInterface() or t.is_on_map() or t.is_on_menu():
+                break
             elif self.common.skip_possible_story():
                 pass
             else:
@@ -94,9 +105,6 @@ class TksBattleGroup:
                 logger.info('AP empty.')
                 if not self.common.eat_apple(self.context):
                     return False
-            elif t.isAddFriend():
-                logger.info('add friend')
-                fgoDevice.device.perform('X', (300,))
             elif p := t.find(IMG.TKS_DIALOG_CLOSE2, A_DIALOG_BUTTONS):
                 # could be friend constraint confirm
                 logger.info('Dialog pops up. click close')

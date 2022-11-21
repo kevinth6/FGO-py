@@ -25,7 +25,7 @@ class TksContext:
             and (account in config['account_jobs']) else None
         if account_jobs:
             for job in account_jobs:
-                self.job_configs[job['name']].update(copy.deepcopy(account_jobs))
+                self.job_configs[job['name']].update(copy.deepcopy(job))
 
     def _setup_job_contexts(self):
         self.job_contexts = {}
