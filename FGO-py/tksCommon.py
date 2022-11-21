@@ -78,9 +78,11 @@ class TksCommon:
         return self
 
     def scroll_and_find(self, img, area, end_pos=P_RIGHT_SCROLL_END, max_swipe=20):
+        return self.scroll_and_find_func(lambda t, i: t.find(img, area), end_pos, max_swipe)
+
+    def scroll_and_find_func(self, func, end_pos=P_RIGHT_SCROLL_END, max_swipe=20):
         for i in range(max_swipe):
-            if (s := TksDetect().find(img, area)) \
-                    or TksDetect.cache.is_list_end(end_pos):
+            if (s := func(TksDetect(), i)) or TksDetect.cache.is_list_end(end_pos):
                 break
             fgoDevice.device.swipe(A_SWIPE_RIGHT_DOWN)
             schedule.sleep(0.3)
@@ -118,8 +120,7 @@ class TksCommon:
         logger.info("Closing all Dialogs")
         i = 0
         while i < check_times:
-            schedule.sleep(1)
-            t = TksDetect().cache
+            t = TksDetect(.4, .3).cache
             if p := self.find_dialog_close(t):
                 t.click(p)
             elif t.isMainInterface():
@@ -136,16 +137,77 @@ class TksCommon:
         return self
 
     def wait_for_submenu(self, interval=.5):
-        while not (TksDetect().is_on_menu() and TksDetect.cache.appear(IMG.LISTBAR, A_LIST_BAR)):
+        while not TksDetect.cache.appear(IMG.LISTBAR, A_LIST_BAR):
             schedule.sleep(interval)
         return self
+
+    def click_and_wait_for_menu_view(self, pos, move_step=None, interval=.7, max_times=5):
+        for i in range(max_times):
+            self.click(pos, interval)
+            if TksDetect().is_on_menu() and TksDetect.cache.appear(IMG.LISTBAR, A_LIST_BAR):
+                return True
+            if move_step:
+                pos = (pos[0] + move_step[0], pos[1] + move_step[1])
+        return False
 
     def skip_possible_story(self):
         # try to skip story
         fgoDevice.device.perform('\x08', (500,))
-        t = TksDetect(.3, .8).cache
+        t = TksDetect(.2, .3).cache
         if p := t.find(IMG.TKS_SKIP_YES, A_DIALOG_BUTTONS):
             logger.info('skip main story')
-            t.click(p)
+            t.click(p, after_delay=.5)
             return True
+        return False
+
+    def handle_special_drop(self, detect, fav=True):
+        if detect.isSpecialDropSuspended():
+            logger.info('Special dropped.')
+            while fav and (p := detect.find(IMG.TKS_FAV, A_LEFT_BUTTONS, after_delay=.5)):
+                logger.info('Mark special as fav.')
+                detect.click(p)
+                detect = TksDetect().cache
+        fgoDevice.device.perform('\x1B', (500,))
+
+    def eat_apple(self, context):
+        job_context = context.cur_job_context()
+        job_config = context.cur_job_config()
+        if not job_context.apple_remaining():
+            logger.info('No apple remaining.')
+            fgoDevice.device.press('Z')
+            return False
+        job_context.apple_used += 1
+        logger.info('Eating an apple. Used ' + str(job_context.apple_used))
+        apple_kind = (job_config['appleKind']) if 'appleKind' in job_config else 0
+        fgoDevice.device.perform('W4K8'[apple_kind] + 'L', (1000, 2000))
+        while TksDetect(.5, .5).isApEmpty():
+            pass
+        # for i in set('W4K')-{'W4K8'[self.appleKind]}:
+        #     if not Detect().isApEmpty():break
+        #     fgoDevice.device.perform(i+'L',(600,1200))
+        # else:raise ScriptStop('No Apples')
+        return True
+
+    def swipe_on_map_and_do(self, func):
+        schedule.sleep(1)
+        fgoDevice.device.pinch()
+        schedule.sleep(1)
+        TksDetect().find_and_click_btn(B_MAIN_TL_CLOSE, after_delay=1)
+
+        schedule.sleep(1)
+        fgoDevice.device.swipe(A_SWIPE_CENTER_DOWN)
+        schedule.sleep(1)
+        fgoDevice.device.swipe(A_SWIPE_CENTER_DOWN)
+        schedule.sleep(1)
+
+        i = 0
+        while True:
+            schedule.sleep(.5)
+            if func(TksDetect(), i):
+                return True
+            else:
+                i += 1
+                if i > 2:
+                    break
+                fgoDevice.device.swipe(A_SWIPE_CENTER_UP)
         return False

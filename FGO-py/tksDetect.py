@@ -38,6 +38,12 @@ for i in os.listdir('fgoImage/instance'):
         elif j.startswith('instance_'):
             INSTANCES[i]['instances'][j[9:]] = img
 
+# load class for menu
+CLASSES_S = {
+    i[:-4]: (lambda x: (x[..., :3], x[..., 3]))(
+        cv2.imread(f'fgoImage/class_s/{i}', cv2.IMREAD_UNCHANGED)
+    ) for i in os.listdir('fgoImage/class_s') if i.endswith('.png')
+}
 
 class Button:
     def __init__(self, center, img_name, size=(0, 0), threshold=.08, padding=2):
@@ -135,8 +141,18 @@ class TksDetect(XDetect):
     def is_on_menu(self):
         return self.appear_btn(B_MAIN_TL_CLOSE)
 
+    def is_on_shop(self):
+        return self.appear(IMG.TKS_CAMPAIGN_SHOP_OFF, A_CAMPAIGN_REWARD_TABS) \
+               or self.appear(IMG.TKS_CAMPAIGN_SHOP_ON, A_CAMPAIGN_REWARD_TABS)
+
     def is_list_end(self, pos):
         return self.appear(IMG.LISTBAR, (pos[0] - 19, 0, pos[0] + 19, 720)) and super()._isListEnd(pos)
+
+    def surround(self, pos, w, h):
+        return pos[0] - (w >> 1), pos[1] - (h >> 1), pos[0] + (w >> 1), pos[1] + (h >> 1)
+
+    def expand(self, rect, size):
+        return rect[0] - size, rect[1] - size, rect[2] + size, rect[3] + size
 
 
 # buttons borrowed from FGO-ExpBall
@@ -208,21 +224,27 @@ P_FAIL_CLOSE = (645, 562)
 P_CONTRACT_AGREE = (712, 455)
 P_SCROLL_TOP = (1256, 98)
 P_CUR_CAMPAIGN = (932, 378)
+P_CAMPAIGN_REWARD_VIEW = (1166, 239)
 
 # Areas
 A_SUB_MENUS = (678, 108, 1278, 566)
 A_TL_BUTTONS = (8, 8, 240, 120)
 A_INSTANCE_MENUS = (614, 90, 1240, 600)
 A_INSTANCE_MENUS_RIGHT = (1020, 90, 1240, 600)
-A_DIALOG_BUTTONS = (156, 360, 1080, 660)
+A_DIALOG_BUTTONS = (156, 400, 1080, 660)
 A_FULL_DIALOG_CONFIRM = (964, 580, 1266, 704)
 A_FULL_DIALOG_CROSS = (1064, 4, 1272, 200)
 A_LOGIN_BOX = (456, 208, 820, 542)
 A_LIST_BAR = (1220, 90, 1276, 610)
-A_SWIPE_CENTER_DOWN = (640, 600, 640, 200)
-A_SWIPE_CENTER_UP = (640, 600, 640, 200)
+A_SWIPE_CENTER_DOWN = (640, 650, 640, 150)
+A_SWIPE_CENTER_UP = (640, 150, 640, 650)
 A_SWIPE_RIGHT_DOWN = (950, 600, 950, 200)
 A_BATTLE_OPTIONS = (656, 198, 1130, 488)
 A_BATTLE_CMD = (1010, 500, 1276, 714)
-A_TOP_RIGHT = (1008, 2, 1278, 75)
+A_TOP_RIGHT = (1008, 2, 1278, 82)
 A_CONTRACT_TITLE = (576, 200, 692, 242)
+A_LEFT_BUTTONS = (2, 220, 70, 520)
+A_CAMPAIGN_REWARD_TABS = (560, 92, 1276, 212)
+A_CAMPAIGN_REWARD_VIEWS = (1065, 200, 1262, 280)
+A_CAMPAIGN_REWARD_1ST_READY = (749, 368, 851, 426)
+A_CAMPAIGN_INSTANCE_REWARD = (1082, 128, 1204, 600)

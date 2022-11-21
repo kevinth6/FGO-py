@@ -8,7 +8,7 @@ from fgoDetect import Detect, IMG
 from tksCommon import TksCommon, save_get, FlowException
 from tksInterface import TksInterface
 from tksContext import TksContext, TksJobContext
-from tksBattle import TksBattle, TksBattleGroup
+from tksBattle import TksBattle, TksBattleGroup, DefeatedException
 from fgoFuse import StuckException
 from tksCampaign import TksCampaign
 
@@ -58,13 +58,16 @@ class TksMain:
         # TksInterface(context).go_free_instance('campaign_20221103', '90', None)
         # TksBattleGroup(context)()
         # TksCommon(self.config).scroll_and_click(IMG.TKS_FREE_DONE, A_INSTANCE_MENUS)
+
         self._cleanup()
         context = TksContext(self.config, 'militaoccasi')
         context.current_job = 'campaign_cur'
-        TksCommon().back_to_top()
-        TksCampaign(context)()
+        TksCampaign(context)._run_first_free()
 
-        #self.do_run()
+        # assert fgoDevice.device.available
+        # print(TksDetect().find(CLASSES_S['assassin'], (1176, 100, 1231, 304)))
+
+        # self.do_run()
 
     def do_run(self):
         """main run entry"""
@@ -74,14 +77,24 @@ class TksMain:
             context = TksContext(self.config, account)
             TksInterface(context).switch_to_account(context.account)
             for job_name in context.job_names:
-                logger.info("run job " + job_name)
                 context.current_job = job_name
-                try:
-                    getattr(self, f'run_{context.job_configs[job_name]["type"]}')(context)
-                except (StuckException, FlowException) as ex:
-                    logger.error('Exception caught, ' + str(ex))
-                    logger.info('Cleanup and continue next job')
-                    self._cleanup()
+                times = 0
+                while times < 3:
+                    try:
+                        logger.info("run job " + job_name)
+                        if getattr(self, f'run_{context.job_configs[job_name]["type"]}')(context):
+                            break
+                    except (StuckException, FlowException) as ex:
+                        logger.error('Exception caught, ' + str(ex))
+                        logger.info('Cleanup and continue')
+                        self._cleanup()
+                        times += 1
+                    except DefeatedException:
+                        logger.error('Defeated too many times. Abandon this job, continue next')
+                        self._cleanup()
+                        break
+                if times >= 3:
+                    logger.error('Exception times exceed 3. Abandon this job, continue next')
 
     def run_free(self, context):
         cjc = context.cur_job_config()

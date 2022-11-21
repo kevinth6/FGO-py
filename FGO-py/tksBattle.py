@@ -8,6 +8,9 @@ from fgoKernel import Battle, Turn, withLock, lock, time
 
 logger = getLogger('TksBattle')
 
+DefeatedException = type('DefeatedException', (Exception,), {})
+MAX_DEFEATED_TIMES = 2
+
 
 class TksBattle(Battle):
     def __init__(self, context):
@@ -72,13 +75,14 @@ class TksBattleGroup:
             t = TksDetect().cache
             if t.isBattleContinue() or t.isMainInterface():
                 break
-            elif t.isSpecialDropSuspended():
-                logger.info('special drop suspended')
-                fgoDevice.device.perform('\x1B', (500,))
+            elif self.common.handle_special_drop(t):
+                pass
             elif p := self.common.find_dialog_close(t):
                 t.click(p)
+            elif self.common.skip_possible_story():
+                pass
             else:
-                fgoDevice.device.press(' ', (600,))
+                fgoDevice.device.perform(' ', (600,))
 
     def _before_battle(self):
         while True:
@@ -88,7 +92,7 @@ class TksBattleGroup:
                 break
             elif t.isApEmpty():
                 logger.info('AP empty.')
-                if not self.eat_apple():
+                if not self.common.eat_apple(self.context):
                     return False
             elif t.isAddFriend():
                 logger.info('add friend')
@@ -126,6 +130,8 @@ class TksBattleGroup:
             self.job_context.battle_failed += 1
             fgoDevice.device.perform('CI', (1000, 1000,))
             self.common.click(P_FAIL_CLOSE, 1)
+            if self.job_context.battle_failed > MAX_DEFEATED_TIMES:
+                raise DefeatedException()
 
         # handle battle continue
         if TksDetect().isBattleContinue():
@@ -135,22 +141,6 @@ class TksBattleGroup:
             else:
                 logger.info('battle continue')
                 fgoDevice.device.press('L', (1000,))
-
-    def eat_apple(self):
-        if not self.job_context.apple_remaining():
-            logger.info('No apple remaining.')
-            return fgoDevice.device.press('Z')
-        self.job_context.apple_used += 1
-        logger.info('Eating an apple. Used ' + str(self.job_context.apple_used))
-        apple_kind = (self.job_config['appleKind']) if 'appleKind' in self.job_config else 0
-        fgoDevice.device.perform('W4K8'[apple_kind] + 'L', (1000, 2000))
-        while TksDetect(.5, .5).isApEmpty():
-            pass
-        # for i in set('W4K')-{'W4K8'[self.appleKind]}:
-        #     if not Detect().isApEmpty():break
-        #     fgoDevice.device.perform(i+'L',(600,1200))
-        # else:raise ScriptStop('No Apples')
-        return self.job_context.apple_used
 
     def choose_friend(self):
         refresh = False

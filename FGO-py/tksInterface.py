@@ -72,22 +72,10 @@ class TksInterface:
     def _go_section_in_chapter(self, chapter, section):
         logger.info(f'Go to section {section}')
         # sometimes campaign map is slow to open
-        schedule.sleep(5)
-        fgoDevice.device.pinch()
-        schedule.sleep(1.5)
-        TksDetect().find_and_click_btn(B_MAIN_TL_CLOSE, after_delay=1.5)
-
-        down = True
-        while not (t := TksDetect().find_and_click(INSTANCES[chapter]['sections'][section])):
-            if down:
-                fgoDevice.device.swipe(A_SWIPE_CENTER_DOWN)
-                down = False
-            else:
-                for i in range(2):
-                    fgoDevice.device.swipe(A_SWIPE_CENTER_UP)
-            schedule.sleep(1)
-
-        if not t:
+        if self.common.swipe_on_map_and_do(
+                lambda t, i: t.find_and_click(INSTANCES[chapter]['sections'][section], threshold=.1)):
+            return self
+        else:
             raise FlowException('Unable to find the section')
 
     def _go_instance(self, chapter, instance):
@@ -111,8 +99,10 @@ class TksInterface:
                 break
 
         if section and (str(section) in INSTANCES[chapter]['sections']):
-            self.common.wait_for_main_interface()
+            while not TksDetect().is_on_map():
+                schedule.sleep(.5)
             self._go_section_in_chapter(chapter, str(section))
 
-        self.common.wait_for_main_interface()
+        while not TksDetect().is_on_menu():
+            schedule.sleep(.5)
         self._go_instance(chapter, instance)
