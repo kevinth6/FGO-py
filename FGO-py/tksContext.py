@@ -1,5 +1,5 @@
 import copy
-from tksCommon import FlowException
+from tksCommon import FlowException, safe_get
 
 
 class TksContext:
@@ -9,7 +9,7 @@ class TksContext:
         self._setup_jobs_config(config, account)
         self._setup_job_contexts()
         self.current_job = None
-        self.options_checked = False
+        self.battle_options_checked = False
 
     def _setup_jobs_config(self, config, account):
         self.job_configs = {}
@@ -30,7 +30,7 @@ class TksContext:
     def _setup_job_contexts(self):
         self.job_contexts = {}
         for job in self.job_configs:
-            self.job_contexts[job] = TksJobContext(self)
+            self.job_contexts[job] = TksJobContext(self.job_configs[job])
 
     def cur_job_config(self):
         if self.current_job and self.current_job in self.job_configs:
@@ -61,15 +61,51 @@ class TksContext:
 
 
 class TksJobContext:
-    def __init__(self, context):
-        self.context = context
+    def __init__(self, job_config):
+        self.job_config = job_config
         self.apple_used = 0
         self.battle_completed = 0
         self.battle_failed = 0
         self.total_turns = 0
         self.total_time = 0
         self.material = {}
+        self.campaign_friend_checked = False
 
     def apple_remaining(self):
-        apple_total = (self.context.cur_job_config()['apples']) if 'apples' in self.context.cur_job_config() else 0
-        return self.apple_used < apple_total
+        return self.apple_used < self.apples()
+
+    def apples(self):
+        return safe_get(self.job_config, 'apples')
+
+    def skip_main(self):
+        return safe_get(self.job_config, 'skip_main')
+
+    def team_index(self):
+        return safe_get(self.job_config, 'team_index')
+
+    def easy_mode(self):
+        return safe_get(self.job_config, 'easy_mode')
+
+    def chapter(self):
+        return safe_get(self.job_config, 'chapter')
+
+    def section(self):
+        return safe_get(self.job_config, 'section')
+
+    def instance(self):
+        return safe_get(self.job_config, 'instance')
+
+    def level(self):
+        return safe_get(self.job_config, 'level')
+
+    def cls(self):
+        return safe_get(self.job_config, 'cls')
+
+    def campaign_servant(self):
+        return safe_get(self.job_config, 'campaign_servant')
+
+    def campaign_reisou(self):
+        return safe_get(self.job_config, 'campaign_reisou')
+
+    def campaign_reisou_idx(self):
+        return safe_get(self.job_config, 'campaign_reisou_idx')

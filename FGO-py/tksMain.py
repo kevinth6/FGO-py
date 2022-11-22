@@ -69,14 +69,16 @@ class TksMain:
         # TksBattleGroup(context)()
         # TksCommon(self.config).scroll_and_click(IMG.TKS_FREE_DONE, A_INSTANCE_MENUS)
 
-        self._cleanup()
+        # self._cleanup()
         context = TksContext(self.config, 'plawast')
         context.current_job = 'campaign_cur'
-        TksCommon().back_to_top()
-        TksCampaign(context)()
+        # TksCommon().back_to_top()
+        # TksCampaign(context)()
         # TksInterface(context).retrieve_week_awards()
 
         assert fgoDevice.device.available
+        # print(TksDetect().find_multiple(IMG.TKS_FRIEND_OPTION_SHOW, A_FRIEND_SHOW_BUTTONS))
+        TksBattleGroup(context).choose_friend()
         # TksCommon().handle_special_drop(TksDetect())
         # print(TksDetect().isAddFriend())
         # for i in range(10):
@@ -131,10 +133,9 @@ class TksMain:
             logger.info("Finish running account " + account)
 
     def run_free(self, context, times):
-        cjc = context.cur_job_config()
+        cjc = context.cur_job_context()
         TksCommon().back_to_top()
-        TksInterface(context).go_free_instance(safe_get(cjc, 'chapter'), safe_get(cjc, 'section'),
-                                               safe_get(cjc, 'instance'))
+        TksInterface(context).go_free_instance(cjc.chapter(), cjc.section(), cjc.instance())
         return TksBattleGroup(context)()
 
     def run_campaign(self, context, times):

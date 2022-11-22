@@ -36,21 +36,21 @@ class TksBattle(Battle):
                 .wait(IMG.TKS_BATTLE_BACK, A_BATTLE_CMD) \
                 .click(P_BATTLE_SPEED, 1) \
                 .click(P_BATTLE_BACK, 2)
-        self.context.options_checked = True
+        self.context.battle_options_checked = True
 
     def __call__(self):
-        if (not self.context.options_checked) and TksDetect(0, .3).isTurnBegin():
+        if (not self.context.battle_options_checked) and TksDetect(0, .3).isTurnBegin():
             self.check_options()
         return super().__call__()
 
 
 class TksBattleGroup:
-    def __init__(self, context, run_once=False):
+    def __init__(self, context, run_once=False, is_free=True):
         self.context = context
         self.run_once = run_once
+        self.is_free = is_free
         self.common = TksCommon()
-        self.job_config = self.context.cur_job_config()
-        self.job_context = self.context.cur_job_context()
+        self.jc = self.context.cur_job_context()
 
     def __call__(self, check_options=True):
         logger.info('enter battle group')
@@ -66,9 +66,9 @@ class TksBattleGroup:
         return True
 
     def choose_team(self):
-        if 'teamIndex' in self.job_config:
-            team_index = (self.job_config['teamIndex'])
-        elif ('easyMode' in self.job_config) and self.job_config['easyMode']:
+        if team_index := self.jc.team_index():
+            pass
+        elif self.jc.easy_mode():
             team_index = 2
         else:
             team_index = 1
@@ -125,20 +125,20 @@ class TksBattleGroup:
         if completed:
             logger.info('battle completed. result ' + str(result))
             if result:
-                self.job_context.battle_completed += 1
-                self.job_context.total_turns += result['turn']
-                self.job_context.total_time += result['time']
-                self.job_context.material = {i: self.job_context.material.get(i, 0) + result['material'].get(i, 0)
-                                             for i in
-                                             self.job_context.material | result['material']}
+                self.jc.battle_completed += 1
+                self.jc.total_turns += result['turn']
+                self.jc.total_time += result['time']
+                self.jc.material = {i: self.jc.material.get(i, 0) + result['material'].get(i, 0)
+                                    for i in
+                                    self.jc.material | result['material']}
             fgoDevice.device.perform(' ', (600,))
             self.battle_completed()
         else:
             logger.info('battle failed. result ' + str(result))
-            self.job_context.battle_failed += 1
+            self.jc.battle_failed += 1
             fgoDevice.device.perform('CI', (1000, 1000,))
             self.common.click(P_FAIL_CLOSE, 1)
-            if self.job_context.battle_failed > MAX_DEFEATED_TIMES:
+            if self.jc.battle_failed > MAX_DEFEATED_TIMES:
                 raise DefeatedException()
 
         # handle battle continue
@@ -148,13 +148,85 @@ class TksBattleGroup:
                 fgoDevice.device.perform('F', (1000,))
             else:
                 logger.info('battle continue')
-                fgoDevice.device.press('L', (1000,))
+                fgoDevice.device.perform('L', (1000,))
 
     def choose_friend(self):
+        if self.is_free:
+            if not self.jc.campaign_friend_checked and (self.jc.campaign_servant() or self.jc.campaign_reisou()):
+                self._handle_campaign_friend_options()
+                self.jc.campaign_friend_checked = True
+            if self.jc.campaign_reisou() and self.jc.campaign_reisou_idx() is not None:
+                TksDetect().find_and_click(IMG.TKS_CLS_COMBINE, A_FRIEND_CLASSES, after_delay=2)
+
         refresh = False
         while not TksDetect(0, .3).isChooseFriend():
             if TksDetect.cache.isNoFriend():
                 if refresh: schedule.sleep(10)
                 fgoDevice.device.perform('\xBAK', (500, 1000))
                 refresh = True
+
         return fgoDevice.device.press('8')
+
+    def _handle_campaign_friend_options(self):
+        t = TksDetect(.3, .3).cache
+        if p := (t.find(IMG.TKS_FRIEND_OPTIONS, A_FRIEND_OPTIONS_BAR)
+                 or t.find(IMG.TKS_FRIEND_OPTIONS_ON, A_FRIEND_OPTIONS_BAR)):
+            t.click(p, after_delay=.7)
+        else:
+            return
+
+        self.common.wait(IMG.TKS_DIALOG_DECIDE, A_DIALOG_BUTTONS)
+        self.common.click(P_FRIEND_OPTION_SCROLL_TOP, after_delay=.5)
+        self.common.click(P_FRIEND_OPTION_RESET, after_delay=.5)
+        if self.jc.campaign_servant():
+            self.common.click(P_FRIEND_CAMPAIGN_SERVANT, after_delay=.5)
+        if self.jc.campaign_reisou():
+            self.common.click(P_FRIEND_CAMPAIGN_REISOU, after_delay=.5)
+            if self.jc.campaign_reisou() == 2:
+                self.common.click(P_FRIEND_OPTION_SCROLL_MID)
+                TksDetect(.3, .3).find_and_click(IMG.TKS_FRIEND_REISOU_MAX, after_delay=.5)
+
+        if (idx := self.jc.campaign_reisou_idx()) is not None:
+            func = lambda t: self._disable_all_reisou(t)
+            self._friend_option_scroll(func)
+            reisou_imgs = []
+            func = lambda t: self._scan_reisou(t, reisou_imgs)
+            self._friend_option_scroll(func)
+            if idx >= len(reisou_imgs):
+                logger.warning(f'Unable to find campaign reisou by index {idx}')
+            else:
+                func = lambda t: self._enable_reisou(t, reisou_imgs[idx])
+                self._friend_option_scroll(func, True)
+
+        TksDetect.cache.find_and_click(IMG.TKS_DIALOG_DECIDE, after_delay=.7)
+
+    def _friend_option_scroll(self, func, find_return=False):
+        self.common.click(P_FRIEND_OPTION_SCROLL_TOP, after_delay=.5)
+        for i in range(5):
+            ret = func(TksDetect())
+            if find_return and ret:
+                return ret
+            if TksDetect.cache.is_list_end(P_FRIEND_OPTION_SCROLL_END):
+                break
+            fgoDevice.device.swipe(A_SWIPE_FRIEND_DOWN)
+            schedule.sleep(0.3)
+
+    def _disable_all_reisou(self, t):
+        ps = t.find_multiple(IMG.TKS_FRIEND_OPTION_SHOW, A_FRIEND_SHOW_BUTTONS)
+        for p in ps:
+            t.click(p, after_delay=.5)
+
+    def _scan_reisou(self, t, reisou_imgs):
+        ps = t.find_multiple(IMG.TKS_FRIEND_OPTION_HIDE, A_FRIEND_SHOW_BUTTONS)
+        for p in ps:
+            rect = t.surround((p[0] - 500, p[1]), 88, 44)
+            for img in reisou_imgs:
+                if t.appear(img, t.expand(rect, 2)):
+                    return
+            reisou_imgs.append([t._crop(rect), None])
+
+    def _enable_reisou(self, t, img):
+        if p := t.find(img):
+            t.click((p[0] + 500, p[1]), after_delay=.5)
+            return True
+        return False

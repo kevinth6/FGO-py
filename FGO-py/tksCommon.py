@@ -79,12 +79,13 @@ class TksCommon:
 
         return self
 
-    def scroll_and_find(self, func, end_pos=P_RIGHT_SCROLL_END, max_swipe=20, top_pos=P_SCROLL_TOP):
+    def scroll_and_find(self, func, end_pos=P_RIGHT_SCROLL_END, max_swipe=20, top_pos=P_SCROLL_TOP,
+                        scroll_area=A_SWIPE_RIGHT_DOWN):
         self.click(top_pos, after_delay=.5)
         for i in range(max_swipe):
             if (s := func(TksDetect(), i)) or TksDetect.cache.is_list_end(end_pos):
                 break
-            fgoDevice.device.swipe(A_SWIPE_RIGHT_DOWN)
+            fgoDevice.device.swipe(scroll_area)
             schedule.sleep(0.3)
 
         return s
@@ -174,15 +175,14 @@ class TksCommon:
             return False
 
     def eat_apple(self, context):
-        job_context = context.cur_job_context()
-        job_config = context.cur_job_config()
-        if not job_context.apple_remaining():
+        cjc = context.cur_job_context()
+        if not cjc.apple_remaining():
             logger.info('No apple remaining.')
             fgoDevice.device.press('Z')
             return False
-        job_context.apple_used += 1
-        logger.info('Eating an apple. Used ' + str(job_context.apple_used))
-        apple_kind = (job_config['appleKind']) if 'appleKind' in job_config else 0
+        cjc.apple_used += 1
+        logger.info('Eating an apple. Used ' + str(cjc.apple_used))
+        apple_kind = cjc.apple_kind() or 0
         fgoDevice.device.perform('W4K8'[apple_kind] + 'L', (1000, 2000))
         while TksDetect(.5, .5).isApEmpty():
             pass

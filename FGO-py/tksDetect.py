@@ -45,6 +45,12 @@ CLASSES_S = {
     ) for i in os.listdir('fgoImage/class_s') if i.endswith('.png')
 }
 
+
+def clamp_rect(rect):
+    clp = lambda value, minv, maxv: max(min(value, maxv), minv)
+    return clp(rect[0], 0, 1280), clp(rect[1], 0, 720), clp(rect[2], 0, 1280), clp(rect[3], 0, 720)
+
+
 class Button:
     def __init__(self, center, img_name, size=(0, 0), threshold=.08, padding=2):
         png = INTERFACES[img_name]
@@ -108,8 +114,8 @@ class TksDetect(XDetect):
                 numpy.uint8))
         ret = []
         for i in range(num_labels - 1):
-            ret.append(
-                (stats[i + 1][0] + int(img[0].shape[1] / 2), stats[i + 1][1] + int(img[0].shape[0] / 2)))
+            ret.append((stats[i + 1][0] + int(img[0].shape[1] / 2) + rect[0],
+                        stats[i + 1][1] + int(img[0].shape[0] / 2) + rect[1]))
         if len(ret) > 0:
             fuse.reset()
         return ret
@@ -151,10 +157,10 @@ class TksDetect(XDetect):
         return self.appear(IMG.LISTBAR, (pos[0] - 19, 0, pos[0] + 19, 720)) and super()._isListEnd(pos)
 
     def surround(self, pos, w, h):
-        return pos[0] - (w >> 1), pos[1] - (h >> 1), pos[0] + (w >> 1), pos[1] + (h >> 1)
+        return clamp_rect((pos[0] - (w >> 1), pos[1] - (h >> 1), pos[0] + (w >> 1), pos[1] + (h >> 1)))
 
     def expand(self, rect, size):
-        return rect[0] - size, rect[1] - size, rect[2] + size, rect[3] + size
+        return clamp_rect((rect[0] - size, rect[1] - size, rect[2] + size, rect[3] + size))
 
 
 # buttons borrowed from FGO-ExpBall
@@ -229,13 +235,19 @@ P_SCROLL_TOP = (1256, 98)
 P_CUR_CAMPAIGN = (932, 378)
 P_CAMPAIGN_REWARD_VIEW = (1166, 239)
 P_DESKTOP_AWARD_VIEW = (1182, 212)
+P_FRIEND_OPTION_SCROLL_TOP = (1084, 61)
+P_FRIEND_OPTION_RESET = (507, 321)
+P_FRIEND_CAMPAIGN_SERVANT = (501, 216)
+P_FRIEND_CAMPAIGN_REISOU = (783, 221)
+P_FRIEND_OPTION_SCROLL_MID = (1084, 268)
+P_FRIEND_OPTION_SCROLL_END = (1084, 578)
 
 # Areas
 A_SUB_MENUS = (678, 108, 1278, 566)
 A_TL_BUTTONS = (8, 8, 240, 120)
 A_INSTANCE_MENUS = (614, 90, 1240, 600)
 A_INSTANCE_MENUS_RIGHT = (1020, 90, 1240, 600)
-A_DIALOG_BUTTONS = (156, 400, 1080, 660)
+A_DIALOG_BUTTONS = (156, 420, 1080, 680)
 A_FULL_DIALOG_CONFIRM = (964, 580, 1266, 704)
 A_FULL_DIALOG_CROSS = (1064, 4, 1272, 200)
 A_LOGIN_BOX = (456, 208, 820, 542)
@@ -256,3 +268,7 @@ A_CAMPAIGN_INSTANCE_REWARD = (1082, 128, 1204, 600)
 A_AWARD_NOTICE = (465, 600, 590, 718)
 A_AWARD_1ST_ICON = (1100, 284, 1212, 394)
 A_INSTANCE_TITLE = (690, 100, 1100, 600)
+A_FRIEND_OPTIONS_BAR = (726, 92, 1278, 166)
+A_FRIEND_SHOW_BUTTONS = (824, 40, 964, 586)
+A_SWIPE_FRIEND_DOWN = (950, 500, 950, 100)
+A_FRIEND_CLASSES = (45, 89, 741, 166)
