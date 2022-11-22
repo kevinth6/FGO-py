@@ -4,6 +4,8 @@ from fgoDetect import IMG
 from fgoLogging import getLogger
 from tksDetect import *
 from tksCommon import TksCommon, FlowException
+from tksBattle import TksBattleGroup
+from tksContext import TksContext
 
 logger = getLogger('TksInterface')
 
@@ -42,7 +44,7 @@ class TksInterface:
         TksDetect.cache.find_and_click(IMG.TKS_LOGIN_DROPDOWN, A_LOGIN_BOX)
 
         for i in range(max_swipe):
-            if s := TksDetect().find_and_click(ACCOUNTS[account], A_LOGIN_BOX):
+            if s := TksDetect().find_and_click(ACCOUNTS[account], A_LOGIN_BOX, threshold=.03):
                 break
             fgoDevice.device.swipe((625, 420, 625, 370))
             schedule.sleep(0.3)
@@ -60,9 +62,20 @@ class TksInterface:
         self._wait_for_start()
         self._select_account(account, 5)
         schedule.sleep(1)
-        if TksDetect().find_and_click(IMG.TKS_NOT_CONTINUE, A_DIALOG_BUTTONS):
-            logger.info('Click not continue')
-        self.common.close_all_dialogs()
+        i = 0
+        while i < 3:
+            t = TksDetect(.5, .5).cache
+            if t.isTurnBegin():
+                logger.info('In battle')
+                TksBattleGroup(TksContext.anonymous_context(), run_once=True)()
+            elif t.find_and_click(IMG.TKS_NOT_CONTINUE, A_DIALOG_BUTTONS, after_delay=.7):
+                logger.info('Click not continue')
+            elif t.find_and_click(IMG.TKS_INTERRUPTED_BATTLE_ENTER, A_DIALOG_BUTTONS, after_delay=.7):
+                logger.info('Continue interrupted battle')
+            elif p := self.common.find_dialog_close(t):
+                t.click(p)
+            else:
+                i += 1
 
     def retrieve_week_awards(self):
         for i in range(3):
@@ -96,7 +109,6 @@ class TksInterface:
                 break
             else:
                 t.click(P_DESKTOP_AWARD_VIEW, after_delay=.7)
-
 
     def rotate_all_accounts(self):
         """login each account one by one. Just login, no work. Usually for all the accounts

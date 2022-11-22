@@ -53,6 +53,8 @@ class TksCommon:
                     or t.find_and_click_btn(B_MAIN_MENU_CLOSE) \
                     or t.find_and_click(IMG.TKS_BACK_MGMT, A_TL_BUTTONS):
                 pass
+            elif p := self.find_dialog_close(t):
+                t.click(p)
             else:
                 t.device.perform('\xBB', (200,))
             fgoSchedule.schedule.sleep(.5)
@@ -97,7 +99,8 @@ class TksCommon:
 
     def find_dialog_close(self, detect):
         if p := detect.find(IMG.TKS_DIALOG_CLOSE, A_DIALOG_BUTTONS) \
-                or detect.find(IMG.TKS_DIALOG_CLOSE2, A_DIALOG_BUTTONS):
+                or detect.find(IMG.TKS_DIALOG_CLOSE2, A_DIALOG_BUTTONS) \
+                or detect.find(IMG.APEMPTY, A_DIALOG_BUTTONS):
             logger.info("Dialog found with close button")
             return p
         elif p := detect.find(IMG.TKS_CROSS, A_FULL_DIALOG_CROSS):
@@ -216,13 +219,20 @@ class TksCommon:
         fgoDevice.device.swipe(A_SWIPE_CENTER_DOWN)
         schedule.sleep(1)
 
-    def go_on_map_and_menu(self, map_screen, map_pos, menu_scroll, menu_pos):
-        self._pinch_and_swipe_down()
-        for i in range(map_screen):
-            fgoDevice.device.swipe(A_SWIPE_CENTER_UP)
-            schedule.sleep(1)
-        self.click_and_wait_for_menu_view(map_pos)
-        for i in range(menu_scroll):
-            fgoDevice.device.swipe(A_SWIPE_RIGHT_DOWN)
-            schedule.sleep(.5)
-        self.click(menu_pos, after_delay=.7)
+    def go_on_map_and_menu(self, map_img, menu_img, map_screen, map_pos, menu_scroll, menu_pos):
+        """search by images first, if not found, search by swipe and pos"""
+        if not (p := self.swipe_on_map_and_do(lambda t, st: t.find(map_img, threshold=.1))):
+            logger.info(f'find map location by screen {map_screen} and pos {map_pos}')
+            self._pinch_and_swipe_down()
+            for i in range(map_screen):
+                fgoDevice.device.swipe(A_SWIPE_CENTER_UP)
+                schedule.sleep(1)
+            p = map_pos
+        self.click_and_wait_for_menu_view(p)
+        if not (p := self.scroll_and_find(lambda t, i: t.find(menu_img, A_INSTANCE_TITLE, threshold=.01))):
+            logger.info(f'find menu location by scroll {menu_scroll} and pos {menu_pos}')
+            for i in range(menu_scroll):
+                fgoDevice.device.swipe(A_SWIPE_RIGHT_DOWN)
+                schedule.sleep(.5)
+            p = menu_pos
+        self.click(p, after_delay=.7)

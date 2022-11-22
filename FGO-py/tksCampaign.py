@@ -188,10 +188,12 @@ class TksCampaign:
         t = TksDetect().cache
         if not t.is_on_map():
             t.find_and_click_btn(B_MAIN_TL_CLOSE, after_delay=1)
+        while p := self.common.find_dialog_close(t):
+            t.click(p, after_delay=1)
 
         logger.info(f'Go on map and menu. ')
-        self.common.go_on_map_and_menu(instance.map_screen, instance.map_pos, instance.menu_scroll,
-                                       instance.menu_pos)
+        self.common.go_on_map_and_menu(instance.map_img, instance.menu_img, instance.map_screen, instance.map_pos,
+                                       instance.menu_scroll, instance.menu_pos)
         if TksDetect().is_on_map():
             logger.info("Still on map. Unexpected. skip this instance.")
             return True
@@ -311,8 +313,8 @@ class TksCampaign:
             else:
                 t.click(P_CAMPAIGN_REWARD_VIEW, after_delay=.7)
 
-    def _scan_free_instances(self, t, st):
-        logger.info(f'Scan free sections on map. screen: {st}')
+    def _scan_free_instances(self, t, mps):
+        logger.info(f'Scan free sections on map. screen: {mps}')
         if len(ps := t.find_multiple(IMG.TKS_FREE_MARK_S, threshold=.1)) > 0:
             idx = 0
             while idx < len(ps):
@@ -321,58 +323,66 @@ class TksCampaign:
                 else:
                     logger.info(f'Find section: {idx}, pos: {ps[idx]}')
                     if rps := self.common.click_and_wait_for_menu_view(ps[idx], (-20, 0)):
-                        func = (lambda t, i: self._find_regular_free(t, st, rps, i))
+                        scanned = self._section_add(t, ps[idx])
+                        func = (lambda t, i: self._find_regular_free(t, mps, rps, i, scanned))
                         self.common.scroll_and_find(func)
                         self.common.click(P_TL_BUTTON, 1)
-                        self._section_add(t, ps[idx])
                     else:
                         logger.info("Can't open section menu.")
                 idx += 1
 
-    def _find_regular_free(self, t, map_screen, map_pos, menu_scroll):
+    def _find_regular_free(self, t, mps, mpp, mus, mpimg):
         ret = False
-        ret = self._find_free_instance(t, IMG.TKS_INSTANCE_BRONZE, map_screen, map_pos, menu_scroll, 1, True) or ret
-        ret = self._find_free_instance(t, IMG.TKS_INSTANCE_SILVER, map_screen, map_pos, menu_scroll, 2, True) or ret
-        ret = self._find_free_instance(t, IMG.TKS_INSTANCE_GOLD, map_screen, map_pos, menu_scroll, 3, True) or ret
+        ret = self._find_free_instance(t, IMG.TKS_INSTANCE_BRONZE, mps, mpp, mus, mpimg, 1, True) or ret
+        ret = self._find_free_instance(t, IMG.TKS_INSTANCE_SILVER, mps, mpp, mus, mpimg, 2, True) or ret
+        ret = self._find_free_instance(t, IMG.TKS_INSTANCE_GOLD, mps, mpp, mus, mpimg, 3, True) or ret
 
-        # ret = self._find_free_instance(t, IMG.TKS_INSTANCE_BRONZE_DONE, map_screen, map_pos, menu_scroll, 1) or ret
-        ret = self._find_free_instance(t, IMG.TKS_INSTANCE_SILVER_DONE, map_screen, map_pos, menu_scroll, 2) or ret
-        ret = self._find_free_instance(t, IMG.TKS_INSTANCE_GOLD_DONE, map_screen, map_pos, menu_scroll, 3) or ret
-        # ret = self._find_free_instance(t, IMG.TKS_INSTANCE_GREEN, map_screen, map_pos, menu_scroll, 4) or ret
+        # ret = self._find_free_instance(t, IMG.TKS_INSTANCE_BRONZE_DONE, mps, map_pos, menu_scroll, 1) or ret
+        ret = self._find_free_instance(t, IMG.TKS_INSTANCE_SILVER_DONE, mps, mpp, mus, mpimg, 2) or ret
+        ret = self._find_free_instance(t, IMG.TKS_INSTANCE_GOLD_DONE, mps, mpp, mus, mpimg, 3) or ret
+        # ret = self._find_free_instance(t, IMG.TKS_INSTANCE_GREEN, mps, map_pos, menu_scroll, 4) or ret
         return ret
 
-    def _find_free_instance(self, t, img, map_screen, map_pos, menu_scroll, level, first=False):
+    def _find_free_instance(self, t, img, map_screen, map_pos, menu_scroll, map_img, level, first=False):
         for mp in t.find_multiple(img, A_CAMPAIGN_INSTANCE_REWARD):
             mp_ab = (mp[0] + A_CAMPAIGN_INSTANCE_REWARD[0], mp[1] + A_CAMPAIGN_INSTANCE_REWARD[1])
             cls = self._detect_cls(t, mp_ab)
-            if self._instance_scanned_add(t, mp_ab, level, cls):
+            if self._instance_scanned(t, mp_ab, level, cls):
                 logger.info(f'Instance already scanned. level: {level}, scroll: {menu_scroll}, pos:{mp}')
             else:
+                scanned = self._instance_add(t, mp_ab, level, cls)
                 instance = FreeInstance(map_screen, map_pos, menu_scroll, mp_ab, level, cls, first)
+                instance.map_img = map_img
+                instance.menu_img = scanned[0]
                 logger.info(f'Instance found: {instance}')
                 if first:
                     self.first_free.append(instance)
                 else:
                     self.regular_free.append(instance)
 
-    def _instance_scanned_add(self, t, new_pos, level, cls):
+    def _instance_scanned(self, t, new_pos, level, cls):
         rect = t.surround((new_pos[0] - 274, new_pos[1] - 61), 180, 20)
         for instance in self.scanned_instances:
             if instance[1] == level and instance[2] == cls and t.appear(instance[0], t.expand(rect, 2), threshold=.01):
-                return True
-        self.scanned_instances.append(([t._crop(rect), None], level, cls))
-        return False
+                return instance
+
+    def _instance_add(self, t, new_pos, level, cls):
+        rect = t.surround((new_pos[0] - 274, new_pos[1] - 61), 180, 20)
+        ret = ([t._crop(rect), None], level, cls)
+        self.scanned_instances.append(ret)
+        return ret
 
     def _section_scanned(self, t, new_pos):
-        rect = t.surround((new_pos[0] - 50, new_pos[1]), 100, 20)
+        rect = t.surround((new_pos[0] - 50, new_pos[1]), 100, 30)
         for section in self.scanned_sections:
-            if t.appear(section, t.expand(rect, 2), threshold=.01):
-                return True
-        return False
+            if t.appear(section, t.expand(rect, 5), threshold=.1):
+                return section
 
     def _section_add(self, t, new_pos):
         rect = t.surround((new_pos[0] - 50, new_pos[1]), 100, 20)
-        self.scanned_sections.append([t._crop(rect), None])
+        ret = [t._crop(rect), None]
+        self.scanned_sections.append(ret)
+        return ret
 
     def _detect_cls(self, t, pos_reward):
         area = (pos_reward[0] + 24, pos_reward[1] - 65, pos_reward[0] + 104, pos_reward[1] + 15)
@@ -395,6 +405,8 @@ class FreeInstance:
         self.level = level  # 1 bronze, 2 silver, 3 gold, 4 green
         self.cls = cls  #
         self.first = first
+        self.map_img = None
+        self.menu_img = None
 
     def __repr__(self):
         return f"FreeInstance(map_screen:{self.map_screen}, map_pos:{self.map_pos}, menu_scroll:{self.menu_scroll}, " \

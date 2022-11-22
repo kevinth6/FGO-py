@@ -7,7 +7,7 @@ logger=getLogger('Fuse')
 StuckException = type('StuckException', (Exception,), {})
 MAX_FUSE_TIME = 3
 class Fuse:
-    def __init__(self,fv=120,logsize=10):
+    def __init__(self,fv=150,logsize=10):
         self.value=0
         self.max=fv
         self.logsize=logsize

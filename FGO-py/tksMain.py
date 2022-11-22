@@ -42,6 +42,8 @@ class TksMain:
                 logger.info('Click login')
             elif t.find_and_click(IMG.TKS_NOT_CONTINUE, A_DIALOG_BUTTONS):
                 logger.info('Click not continue')
+            elif t.find_and_click(IMG.TKS_INTERRUPTED_BATTLE_ENTER, A_DIALOG_BUTTONS):
+                logger.info('Continue interrupted battle')
             elif t.isMainInterface():
                 self.common.close_all_dialogs()
                 break
@@ -50,7 +52,7 @@ class TksMain:
             elif p := self.common.find_dialog_close(t):
                 t.click(p)
             else:
-                fgoDevice.device.perform('\xBB\x08', (200, 500))
+                fgoDevice.device.perform('\xBB', (500,))
             schedule.sleep(.5)
 
     def do_find(self):
@@ -67,11 +69,11 @@ class TksMain:
         # TksBattleGroup(context)()
         # TksCommon(self.config).scroll_and_click(IMG.TKS_FREE_DONE, A_INSTANCE_MENUS)
 
-        # self._cleanup()
-        # context = TksContext(self.config, 'militaoccasi')
-        # context.current_job = 'campaign_cur'
-        # TksCommon().back_to_top()
-        # TksCampaign(context)()
+        self._cleanup()
+        context = TksContext(self.config, 'plawast')
+        context.current_job = 'campaign_cur'
+        TksCommon().back_to_top()
+        TksCampaign(context)()
         # TksInterface(context).retrieve_week_awards()
 
         assert fgoDevice.device.available
@@ -80,7 +82,7 @@ class TksMain:
         # for i in range(10):
         #     print(TksDetect().find_multiple(IMG.TKS_CAMPAIGN_NEXT, threshold=0.2))
 
-        self.do_run()
+        # self.do_run()
 
     def do_run(self):
         """main run entry"""
@@ -110,8 +112,9 @@ class TksMain:
                 times = 0
                 while times < 3:
                     try:
-                        logger.info("run job " + job_name)
+                        logger.info("Run job " + job_name)
                         getattr(self, f'run_{context.job_configs[job_name]["type"]}')(context, times)
+                        logger.info("Finish running job " + job_name)
                         break
                     except (StuckException, FlowException) as ex:
                         logger.error('Exception caught, ' + str(ex))
@@ -124,6 +127,8 @@ class TksMain:
                         break
                 if times >= 3:
                     logger.error('Exception times exceed 3. Abandon this job, continue next')
+
+            logger.info("Finish running account " + account)
 
     def run_free(self, context, times):
         cjc = context.cur_job_config()
