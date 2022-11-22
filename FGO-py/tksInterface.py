@@ -59,7 +59,44 @@ class TksInterface:
             .wait_and_click(IMG.TKS_DIALOG_YES, A_DIALOG_BUTTONS)
         self._wait_for_start()
         self._select_account(account, 5)
+        schedule.sleep(1)
+        if TksDetect().find_and_click(IMG.TKS_NOT_CONTINUE, A_DIALOG_BUTTONS):
+            logger.info('Click not continue')
         self.common.close_all_dialogs()
+
+    def retrieve_week_awards(self):
+        for i in range(3):
+            if TksDetect().find_and_click(IMG.TKS_COMPLETED_NOTICE, A_AWARD_NOTICE, threshold=.02):
+                logger.info('Found awards notice.')
+                break
+        if i >= 2:
+            logger.info('No awards notice available.')
+            return False
+
+        while True:
+            t = TksDetect(.2, .5).cache
+            if t.appear(IMG.TKS_WEEK_AWARD_ON, A_CAMPAIGN_REWARD_TABS, threshold=.01):
+                if t.appear(IMG.TKS_REWARD_READY, A_DESKTOP_AWARD_VIEWS):
+                    if p := t.find(IMG.TKS_QUARTZ_SPLIT, A_AWARD_1ST_ICON):
+                        logger.info('Find ready quartz split. Get it.')
+                        t.click(p, after_delay=.7)
+                        t.click(P_DESKTOP_AWARD_VIEW, after_delay=.7)
+                    else:
+                        logger.info('No ready week award any more.')
+                        t.click(P_TL_BUTTON, after_delay=.7)
+                        break
+                else:
+                    t.click(P_DESKTOP_AWARD_VIEW, after_delay=.7)
+            elif p := t.find(IMG.TKS_WEEK_AWARD_OFF, A_CAMPAIGN_REWARD_TABS):
+                logger.info('Not in week award view. Go to the view')
+                t.click(p, after_delay=.7)
+            elif p := self.common.find_dialog_close(t):
+                t.click(p, after_delay=.7)
+            elif t.is_on_map() or t.is_on_top():
+                break
+            else:
+                t.click(P_DESKTOP_AWARD_VIEW, after_delay=.7)
+
 
     def rotate_all_accounts(self):
         """login each account one by one. Just login, no work. Usually for all the accounts

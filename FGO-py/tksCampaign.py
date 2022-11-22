@@ -27,10 +27,12 @@ class TksCampaign:
     def __init__(self, context):
         self.common = TksCommon()
         self.context = context
-        self.free_instances = []
+        self.regular_free = []
+        self.first_free = []
         self.scanned_instances = []
+        self.scanned_sections = []
 
-    def __call__(self, skip_main=False, skip_first=False):
+    def __call__(self, skip_main=False):
         self.common.click(P_CUR_CAMPAIGN, after_delay=1)
         cjc = self.context.cur_job_config()
         if not skip_main:
@@ -41,16 +43,8 @@ class TksCampaign:
         else:
             logger.info('Main task skipped on required.')
 
-        if not skip_first:
-            skip_first = ('skiFirst' in cjc) and cjc['skiFirst']
-        if not skip_first:
-            if ret:
-                ret = self._run_first_free()
-        else:
-            logger.info('First free running skipped on required.')
-
         if ret:
-            ret = self._run_regular_free()
+            ret = self._run_free()
         return ret
 
     def _run_main_tasks(self):
@@ -60,7 +54,7 @@ class TksCampaign:
             t = TksDetect(.3, .5).cache
             if flag & 0x4 and t.is_on_shop():
                 self._handle_rewards()
-                flag = 0b00000001
+                flag = 0b00000011
             elif flag & 0x8 and t.appear(IMG.TKS_CHOOSE_FRIEND, A_TOP_RIGHT):
                 TksBattleGroup(self.context, True)()
                 flag = 0b10100111
@@ -86,17 +80,15 @@ class TksCampaign:
                 if p := t.find(IMG.TKS_REWARD_AVAILABLE, A_TOP_RIGHT, threshold=.02):
                     logger.info('Found available rewards. Go to reward view.')
                     t.click(p)
-                    flag = 0b00000100
+                    flag = 0b00000101
                 else:
                     ret = self._iterate_map_tasks(t)
                     if ret:
-                        flag = 0b00000100
-                    elif ret == False:
-                        break
-                    elif ret is None:
+                        flag = 0b11011000
+                    else:
                         # go back and forth to find the task
-                        if self._back_and_forth_find_task(t):
-                            flag = 0b00000100
+                        if f := self._back_and_forth_find_task(t):
+                            flag = f
                         else:
                             break
             elif flag & 0x2 and t.is_on_menu():
@@ -119,52 +111,43 @@ class TksCampaign:
         logger.info('Main tasks running exit.')
         return True
 
-    def _run_first_free(self):
-        logger.info('First free running start.')
-        ret = True
-        while True:
-            t = TksDetect().cache
-            if not t.is_on_map():
-                t.find_and_click_btn(B_MAIN_TL_CLOSE, after_delay=1)
-                continue
-            if instance := self.common.swipe_on_map_and_do(lambda t, st: self._scan_and_run_first_free(t, st)):
-                if not self._run_free_instance(instance, first=True):
-                    ret = False
-                    break
-            else:
-                ret = True
-                break
-        logger.info('First free running exit.')
-        return ret
-
-    def _run_regular_free(self):
-        logger.info('Regular free running start.')
+    def _run_free(self):
+        logger.info('Free instances running start.')
         self.scanned_instances.clear()
-        self.free_instances.clear()
+        self.scanned_sections.clear()
+        self.first_free.clear()
+        self.regular_free.clear()
         while not TksDetect().is_on_map():
             TksDetect().cache.find_and_click_btn(B_MAIN_TL_CLOSE, after_delay=1)
 
-        self.common.swipe_on_map_and_do(lambda t, st: self._scan_regular_free(t, st))
-        if len(self.free_instances) == 0:
-            logger.info('No regular free instance to run')
-            return True
+        self.common.swipe_on_map_and_do(lambda t, st: self._scan_free_instances(t, st))
+        logger.info(f'Instance scanned. first free: {len(self.first_free)}, regular free: {len(self.regular_free)}')
 
         ret = True
+        for instance in self.first_free:
+            logger.info(f'Run first free instance: {instance}')
+            if not self._run_free_instance(instance):
+                ret = False
+                break
+        if not ret:
+            return ret
+
+        self.regular_free = self.regular_free + self.first_free
         bak_instances = []
         while True:
-            idx = random.randint(0, len(self.free_instances) - 1)
-            instance = self.free_instances.pop(idx)
+            idx = random.randint(0, len(self.regular_free) - 1)
+            instance = self.regular_free.pop(idx)
             bak_instances.append(instance)
-            logger.info(f'Run regular instance idx: {idx}, instance: {instance}')
-            if not self._run_regular_free_instance(instance):
+            logger.info(f'Run regular free instance, idx: {idx}, instance: {instance}')
+            if not self._run_free_instance(instance):
                 ret = False
                 break
 
-            if len(self.free_instances) == 0:
-                self.free_instances = self.free_instances + bak_instances
+            if len(self.regular_free) == 0:
+                self.regular_free = self.regular_free + bak_instances
                 bak_instances.clear()
 
-        logger.info('Regular free running exit.')
+        logger.info('Free instances running exit.')
         return ret
 
     def _back_and_forth_find_task(self, t):
@@ -174,26 +157,34 @@ class TksCampaign:
         while not TksDetect(.5, .5).is_on_map():
             pass
         schedule.sleep(1.5)
+
+        if p := t.find(IMG.TKS_REWARD_AVAILABLE, A_TOP_RIGHT, threshold=.02):
+            logger.info('Found available rewards. Go to reward view.')
+            t.click(p)
+            return 0b00000101
+
         ret = self._iterate_map_tasks(t)
         if ret:
-            return True
+            return 0b11011100
         elif ret is None:
             logger.info('Click center to find a task')
             if self.common.click_and_wait_for_menu_view(P_CENTER, interval=.7, max_times=3):
                 if self.common.scroll_and_find(lambda t, i: self._iterate_menu_tasks()):
-                    return True
+                    return 0b11011100
                 else:
                     self.common.click(P_TL_BUTTON, 1)
             else:
                 logger.info("Can't open section menu.")
-        return False
+        return None
 
-    def _run_regular_free_instance(self, instance):
+    def _run_free_instance(self, instance):
+        """return False means stop running following. True means continue."""
         cf = self.context.cur_job_config()
-        if (('level' in cf) and cf['level'] != instance.level) \
-                or (('cls' in cf) and cf['cls'] != instance.cls):
+        if not instance.first and (('level' in cf) and cf['level'] != instance.level
+                                   or ('cls' in cf) and cf['cls'] != instance.cls):
             logger.info(f'Instance not wanted. level:{instance.level}, cls:{instance.cls}')
-            return False
+            return True
+
         t = TksDetect().cache
         if not t.is_on_map():
             t.find_and_click_btn(B_MAIN_TL_CLOSE, after_delay=1)
@@ -202,12 +193,12 @@ class TksCampaign:
         self.common.go_on_map_and_menu(instance.map_screen, instance.map_pos, instance.menu_scroll,
                                        instance.menu_pos)
         if TksDetect().is_on_map():
-            logger.info("Still on map, unexpected. skip this instance.")
-            return False
-        return self._run_free_instance(instance)
+            logger.info("Still on map. Unexpected. skip this instance.")
+            return True
+        return self._run_instance()
 
-    def _run_free_instance(self, instance, first=False):
-        logger.info(f'Start free instance running. first:{first}, level:{instance.level}, cls:{instance.cls}')
+    def _run_instance(self):
+        logger.info(f'Start instance running.')
         flag = 0b11011000
         while True:
             t = TksDetect().cache
@@ -233,6 +224,10 @@ class TksCampaign:
                 logger.info('On menu, back')
                 self.common.click(P_TL_BUTTON)
                 flag = 0b00000011
+            elif t.is_on_shop():
+                logger.info('On shop, unexpected, back')
+                self.common.click(P_TL_BUTTON)
+                flag = 0b00000001
             elif flag & 0x80 and self.common.skip_possible_story():
                 flag = 0b10111111
             else:
@@ -316,45 +311,30 @@ class TksCampaign:
             else:
                 t.click(P_CAMPAIGN_REWARD_VIEW, after_delay=.7)
 
-    def _scan_and_run_first_free(self, t, st):
-        logger.info(f'iterate first free sections on map. screen: {st}')
+    def _scan_free_instances(self, t, st):
+        logger.info(f'Scan free sections on map. screen: {st}')
         if len(ps := t.find_multiple(IMG.TKS_FREE_MARK_S, threshold=.1)) > 0:
             idx = 0
             while idx < len(ps):
-                logger.info(f'Find section: {idx}, pos: {ps[idx]}')
-                if rps := self.common.click_and_wait_for_menu_view(ps[idx], (-20, 0)):
-                    func = (lambda t, i: self._find_first_free(t, st, rps, i))
-                    if instance := self.common.scroll_and_find(func):
-                        self.common.click(instance.menu_pos, 1)
-                        return instance
-                    else:
+                if self._section_scanned(t, ps[idx]):
+                    logger.info(f'Section already scanned. {ps[idx]}')
+                else:
+                    logger.info(f'Find section: {idx}, pos: {ps[idx]}')
+                    if rps := self.common.click_and_wait_for_menu_view(ps[idx], (-20, 0)):
+                        func = (lambda t, i: self._find_regular_free(t, st, rps, i))
+                        self.common.scroll_and_find(func)
                         self.common.click(P_TL_BUTTON, 1)
-                else:
-                    logger.info("Can't open section menu.")
+                        self._section_add(t, ps[idx])
+                    else:
+                        logger.info("Can't open section menu.")
                 idx += 1
-
-    def _scan_regular_free(self, t, st):
-        logger.info(f'iterate first free sections on map. screen: {st}')
-        if len(ps := t.find_multiple(IMG.TKS_FREE_MARK_S, threshold=.1)) > 0:
-            idx = 0
-            while idx < len(ps):
-                logger.info(f'Find section: {idx}, pos: {ps[idx]}')
-                if rps := self.common.click_and_wait_for_menu_view(ps[idx], (-20, 0)):
-                    func = (lambda t, i: self._find_regular_free(t, st, rps, i))
-                    self.common.scroll_and_find(func)
-                    self.common.click(P_TL_BUTTON, 1)
-                else:
-                    logger.info("Can't open section menu.")
-                idx += 1
-
-    def _find_first_free(self, t, map_screen, map_pos, menu_scroll):
-        return self._find_free_instance(t, IMG.TKS_INSTANCE_BRONZE, map_screen, map_pos, menu_scroll, 1, first=True) \
-               or self._find_free_instance(t, IMG.TKS_INSTANCE_SILVER, map_screen, map_pos, menu_scroll, 2, first=True) \
-               or self._find_free_instance(t, IMG.TKS_INSTANCE_GOLD, map_screen, map_pos, menu_scroll, 3, first=True)
-        # or = self._find_free_instance(t, IMG.TKS_INSTANCE_GREEN, map_screen, map_pos, menu_scroll, 4) or ret
 
     def _find_regular_free(self, t, map_screen, map_pos, menu_scroll):
         ret = False
+        ret = self._find_free_instance(t, IMG.TKS_INSTANCE_BRONZE, map_screen, map_pos, menu_scroll, 1, True) or ret
+        ret = self._find_free_instance(t, IMG.TKS_INSTANCE_SILVER, map_screen, map_pos, menu_scroll, 2, True) or ret
+        ret = self._find_free_instance(t, IMG.TKS_INSTANCE_GOLD, map_screen, map_pos, menu_scroll, 3, True) or ret
+
         # ret = self._find_free_instance(t, IMG.TKS_INSTANCE_BRONZE_DONE, map_screen, map_pos, menu_scroll, 1) or ret
         ret = self._find_free_instance(t, IMG.TKS_INSTANCE_SILVER_DONE, map_screen, map_pos, menu_scroll, 2) or ret
         ret = self._find_free_instance(t, IMG.TKS_INSTANCE_GOLD_DONE, map_screen, map_pos, menu_scroll, 3) or ret
@@ -363,27 +343,36 @@ class TksCampaign:
 
     def _find_free_instance(self, t, img, map_screen, map_pos, menu_scroll, level, first=False):
         for mp in t.find_multiple(img, A_CAMPAIGN_INSTANCE_REWARD):
-            logger.info(f'Found instance in menu. level: {level}, scroll: {menu_scroll}, pos:{mp}')
             mp_ab = (mp[0] + A_CAMPAIGN_INSTANCE_REWARD[0], mp[1] + A_CAMPAIGN_INSTANCE_REWARD[1])
             cls = self._detect_cls(t, mp_ab)
-            if self._instance_scanned(t, mp_ab, level, cls):
-                logger.info(f'Instance already scanned.')
+            if self._instance_scanned_add(t, mp_ab, level, cls):
+                logger.info(f'Instance already scanned. level: {level}, scroll: {menu_scroll}, pos:{mp}')
             else:
-                instance = FreeInstance(map_screen, map_pos, menu_scroll, mp_ab, level, cls)
+                instance = FreeInstance(map_screen, map_pos, menu_scroll, mp_ab, level, cls, first)
+                logger.info(f'Instance found: {instance}')
                 if first:
-                    logger.info(f'Instance found: {instance}')
-                    return instance
+                    self.first_free.append(instance)
                 else:
-                    logger.info(f'Instance added: {instance}')
-                    self.free_instances.append(instance)
+                    self.regular_free.append(instance)
 
-    def _instance_scanned(self, t, new_pos, level, cls):
+    def _instance_scanned_add(self, t, new_pos, level, cls):
         rect = t.surround((new_pos[0] - 274, new_pos[1] - 61), 180, 20)
         for instance in self.scanned_instances:
             if instance[1] == level and instance[2] == cls and t.appear(instance[0], t.expand(rect, 2), threshold=.01):
                 return True
         self.scanned_instances.append(([t._crop(rect), None], level, cls))
         return False
+
+    def _section_scanned(self, t, new_pos):
+        rect = t.surround((new_pos[0] - 50, new_pos[1]), 100, 20)
+        for section in self.scanned_sections:
+            if t.appear(section, t.expand(rect, 2), threshold=.01):
+                return True
+        return False
+
+    def _section_add(self, t, new_pos):
+        rect = t.surround((new_pos[0] - 50, new_pos[1]), 100, 20)
+        self.scanned_sections.append([t._crop(rect), None])
 
     def _detect_cls(self, t, pos_reward):
         area = (pos_reward[0] + 24, pos_reward[1] - 65, pos_reward[0] + 104, pos_reward[1] + 15)
@@ -398,14 +387,15 @@ class TksCampaign:
 
 
 class FreeInstance:
-    def __init__(self, map_screen, map_pos, menu_scroll, menu_pos, level, cls):
+    def __init__(self, map_screen, map_pos, menu_scroll, menu_pos, level, cls, first):
         self.map_screen = map_screen
         self.map_pos = map_pos
         self.menu_scroll = menu_scroll
         self.menu_pos = menu_pos
         self.level = level  # 1 bronze, 2 silver, 3 gold, 4 green
         self.cls = cls  #
+        self.first = first
 
     def __repr__(self):
         return f"FreeInstance(map_screen:{self.map_screen}, map_pos:{self.map_pos}, menu_scroll:{self.menu_scroll}, " \
-               f"menu_pos:{self.menu_pos}, level:{self.level}, cls:{self.cls})"
+               f"menu_pos:{self.menu_pos}, level:{self.level}, cls:{self.cls}, first:{self.first})"
