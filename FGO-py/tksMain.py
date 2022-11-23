@@ -85,7 +85,7 @@ class TksMain:
         # for i in range(10):
         #     print(TksDetect().find(FRIEND_REISOUS['exp'], A_FRIEND_ICONS))
 
-        self.do_run()
+        # self.do_run()
 
     def do_run(self):
         """main run entry"""

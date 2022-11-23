@@ -1,4 +1,4 @@
-import copy, time, yaml, os
+import copy, time, yaml, os, collections, json
 from tksCommon import FlowException, safe_get
 
 
@@ -6,6 +6,7 @@ class TksContext:
     def __init__(self, config, account):
         self.config = config
         self.account = account
+        self.start_time = time.time()
         self._setup_jobs_config(config, account)
         self._setup_job_contexts()
         self.current_job = None
@@ -51,9 +52,9 @@ class TksContext:
         if not os.path.exists(save_path):
             os.makedirs(save_path)
         t = time.time()
-        name = time.strftime(f'{save_path}{f"/res_%Y-%m-%d_%H.%M.%S.{round(t * 1000) % 1000:03}"}.yaml')
+        name = time.strftime(f'{save_path}{f"/res_%Y-%m-%d_%H.%M.%S.{round(t * 1000) % 1000:03}"}.json')
         with open(name, "w") as f:
-            yaml.dump(self.out(), f)
+            json.dump(self.out(), f, indent=4)
 
     def out(self):
         total_comp = TksContext.sum_in_obj_dict(self.job_contexts, 'battle_completed')
@@ -62,19 +63,22 @@ class TksContext:
         for jck in self.job_contexts:
             TksContext.dict_add(materials, self.job_contexts[jck].materials)
 
-        return {
-            "battle_completed": total_comp,
-            "battle_failed": total_fail,
-            "apple_used": TksContext.sum_in_obj_dict(self.job_contexts, 'apple_used'),
-            "total_turns": TksContext.sum_in_obj_dict(self.job_contexts, 'total_turns'),
-            "total_time": TksContext.sum_in_obj_dict(self.job_contexts, 'total_time'),
-            "avg_turns": TksContext.avg(TksContext.sum_in_obj_dict(self.job_contexts, 'total_turns'),
-                                        total_comp + total_fail),
-            "avg_time": TksContext.avg(TksContext.sum_in_obj_dict(self.job_contexts, 'total_time'),
-                                       total_comp + total_fail),
-            "special_drops": TksContext.sum_in_obj_dict(self.job_contexts, 'special_drops'),
-            "materials": materials
-        }
+        ret = collections.OrderedDict()
+        ret["start_time"] = time.strftime(f'%Y-%m-%d_%H.%M.%S.{round(self.start_time * 1000) % 1000:03}')
+        ret['end_time'] = time.strftime(f'%Y-%m-%d_%H.%M.%S.{round(self.start_time * 1000) % 1000:03}')
+        ret['battle_completed'] = total_comp
+        ret['battle_failed'] = total_fail
+        ret['apple_used'] = TksContext.sum_in_obj_dict(self.job_contexts, 'apple_used')
+        ret['total_turns'] = TksContext.sum_in_obj_dict(self.job_contexts, 'total_turns')
+        ret['total_time'] = TksContext.sum_in_obj_dict(self.job_contexts, 'total_time')
+        ret['avg_turns'] = TksContext.avg(TksContext.sum_in_obj_dict(self.job_contexts, 'total_turns'),
+                                          total_comp + total_fail)
+        ret['avg_time'] = TksContext.avg(TksContext.sum_in_obj_dict(self.job_contexts, 'total_time'),
+                                         total_comp + total_fail)
+        ret['special_drops'] = TksContext.sum_in_obj_dict(self.job_contexts, 'special_drops')
+        ret['materials'] = materials
+
+        return ret
 
     @staticmethod
     def anonymous_context():
