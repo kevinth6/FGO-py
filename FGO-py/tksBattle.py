@@ -83,7 +83,7 @@ class TksBattleGroup:
             if t.isBattleContinue():
                 break
             elif self.common.handle_special_drop(t, self.context):
-                pass
+                logger.info('Special dropped.')
             elif t.isAddFriend():
                 logger.info('add friend')
                 fgoDevice.device.perform('X', (300,))

@@ -1,4 +1,3 @@
-import math
 import random
 
 import fgoDevice
@@ -73,6 +72,7 @@ class TksCampaign:
                 else:
                     flag = 0b11111111
             elif flag & 0x20 and self.common.handle_special_drop(t, self.context):
+                logger.info('Special dropped.')
                 flag = 0b10100111
             elif p := self.common.find_dialog_close(t):
                 logger.info('close dialog on ' + str(p))
@@ -213,6 +213,7 @@ class TksCampaign:
                 else:
                     flag = 0b11111111
             elif flag & 0x20 and self.common.handle_special_drop(t, self.context):
+                logger.info('Special dropped.')
                 flag = 0b10100111
             elif p := self.common.find_dialog_close(t):
                 logger.info('close dialog on ' + str(p))
@@ -311,7 +312,7 @@ class TksCampaign:
                 logger.info('Not in reward view. Go to reward view')
                 t.click(p, after_delay=.7)
             elif self.common.handle_special_drop(t, self.context):
-                pass
+                logger.info('Special dropped.')
             elif p := self.common.find_dialog_close(t):
                 t.click(p, after_delay=.7)
             elif t.is_on_map() or t.is_on_top():

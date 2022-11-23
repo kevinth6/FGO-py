@@ -14,7 +14,7 @@ def safe_get(dict, name):
 
 
 class TksCommon:
-    def click(self, pos, after_delay=0.3):
+    def click(self, pos, after_delay=0.5):
         device.touch(pos)
         schedule.sleep(after_delay)
         return self
@@ -25,9 +25,10 @@ class TksCommon:
         return self
 
     def click_and_wait(self, pos, img, rect=(0, 0, 1280, 720), threshold=.05, interval=.5):
-        self.click(pos, after_delay=interval)
-        while not TksDetect().appear(img, rect, threshold):
+        while True:
             self.click(pos, after_delay=interval)
+            if TksDetect().appear(img, rect, threshold):
+                break
         return self
 
     def wait_btn(self, button, interval=.5):
@@ -69,7 +70,7 @@ class TksCommon:
 
     def go_menu(self, menu_pos):
         """Go to one main menu, guarantee in main interface before return"""
-        logger.info('Go menu ' + str(menu_pos))
+        logger.info(f'Go menu {menu_pos}')
         if not TksDetect.cache:
             TksDetect()
 
@@ -171,12 +172,11 @@ class TksCommon:
     def handle_special_drop(self, t, context, fav=True):
         cjc = context.cur_job_context()
         if t.isSpecialDropSuspended():
-            logger.info('Special dropped.')
             while fav and (p := t.find(IMG.TKS_FAV, A_LEFT_BUTTONS)):
                 logger.info('Mark special as fav.')
                 t.click(p)
                 t = TksDetect().cache
-            fgoDevice.device.perform('\x1B', (500,))
+            fgoDevice.device.perform('\x1B', (1500,))
             cjc.special_drops += 1
             return True
         else:

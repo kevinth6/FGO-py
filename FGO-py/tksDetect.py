@@ -51,6 +51,12 @@ FRIEND_REISOUS = {
     ) for i in os.listdir('fgoImage/friend_reisou') if i.endswith('.png')
 }
 
+SUMMON_SPECIAL = [
+    (i[:-4], (lambda x: (x[..., :3], x[..., 3]))(
+        cv2.imread(f'fgoImage/summon_special/{i}', cv2.IMREAD_UNCHANGED)
+    )) for i in os.listdir('fgoImage/summon_special') if i.endswith('.png')
+]
+
 
 def clamp_rect(rect):
     clp = lambda value, minv, maxv: max(min(value, maxv), minv)
@@ -58,10 +64,12 @@ def clamp_rect(rect):
 
 
 class Button:
-    def __init__(self, center, img_name, size=(0, 0), threshold=.08, padding=2):
-        png = INTERFACES[img_name]
-        l_sub = (lambda x: x[center[1] - size[1]:center[1] + size[1], center[0] - size[0]:center[0] + size[0]])
-        self.img = (l_sub(png[0]), l_sub(png[1]))
+    def __init__(self, center, img_name=None, size=(0, 0), threshold=.08, padding=2):
+        self.center = center
+        if img_name:
+            png = INTERFACES[img_name]
+            l_sub = (lambda x: x[center[1] - size[1]:center[1] + size[1], center[0] - size[0]:center[0] + size[0]])
+            self.img = (l_sub(png[0]), l_sub(png[1]))
         self.threshold = threshold
         self.rect = (center[0] - size[0] - padding, center[1] - size[1] - padding,
                      center[0] + size[0] + padding, center[1] + size[1] + padding)
@@ -190,9 +198,6 @@ SELECT_FINISH = Button((1153, 673), 'lock', (27, 12))
 SELECT_LOCK = Button((74, 246), 'lock', (6, 8), .13, 4)
 FILTER_EVENT = Button((804, 130), 'lock', (80, 18))
 P_FILTER_FILTER = (980, 130)
-P_FILTER_STAR_3 = (642, 235)
-P_FILTER_STAR_2 = (831, 235)
-P_FILTER_STAR_1 = (1019, 235)
 P_FILTER_SCROLL = (1135, 565)
 P_FILTER_EXP = (639, 385)
 P_FILTER_FOU = (852, 385)
@@ -222,6 +227,13 @@ B_TOP_NOTICE = Button((88, 42), 'top_interface', (55, 13))
 B_MAIN_MENU_CLOSE = Button((1186, 475), 'main', (83, 23))
 B_FRIEND_TL_BACK = Button((88, 42), 'friend_formation', (55, 13))
 B_NOTICE = Button((636, 36), 'notice', (89, 17))
+B_SUMMON_AUTO_SALE = Button((642, 465), 'summon_submit', (190, 40))
+B_FILTER_STAR_3_ON = Button((642, 235), 'filter2', (60, 50))
+B_FILTER_STAR_2_ON = Button((831, 235), 'filter', (60, 50))
+B_FILTER_STAR_1_ON = Button((1019, 235), 'filter', (60, 50))
+B_FILTER_STAR_3_OFF = Button((642, 235), 'filter', (60, 50))
+B_FILTER_STAR_2_OFF = Button((831, 235), 'filter2', (60, 50))
+B_FILTER_STAR_1_OFF = Button((1019, 235), 'filter2', (60, 50))
 
 P_CENTER = (640, 360)
 P_NOTICE_CLOSE = (1242, 36)

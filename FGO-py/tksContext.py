@@ -59,24 +59,15 @@ class TksContext:
     def out(self):
         total_comp = TksContext.sum_in_obj_dict(self.job_contexts, 'battle_completed')
         total_fail = TksContext.sum_in_obj_dict(self.job_contexts, 'battle_failed')
-        materials = {}
-        for jck in self.job_contexts:
-            TksContext.dict_add(materials, self.job_contexts[jck].materials)
 
         ret = collections.OrderedDict()
         ret["start_time"] = time.strftime(f'%Y-%m-%d_%H.%M.%S.{round(self.start_time * 1000) % 1000:03}')
         ret['end_time'] = time.strftime(f'%Y-%m-%d_%H.%M.%S.{round(self.start_time * 1000) % 1000:03}')
         ret['battle_completed'] = total_comp
         ret['battle_failed'] = total_fail
-        ret['apple_used'] = TksContext.sum_in_obj_dict(self.job_contexts, 'apple_used')
-        ret['total_turns'] = TksContext.sum_in_obj_dict(self.job_contexts, 'total_turns')
-        ret['total_time'] = TksContext.sum_in_obj_dict(self.job_contexts, 'total_time')
-        ret['avg_turns'] = TksContext.avg(TksContext.sum_in_obj_dict(self.job_contexts, 'total_turns'),
-                                          total_comp + total_fail)
-        ret['avg_time'] = TksContext.avg(TksContext.sum_in_obj_dict(self.job_contexts, 'total_time'),
-                                         total_comp + total_fail)
-        ret['special_drops'] = TksContext.sum_in_obj_dict(self.job_contexts, 'special_drops')
-        ret['materials'] = materials
+        ret['jobs'] = collections.OrderedDict()
+        for jck in self.job_contexts:
+            ret['jobs'][jck] = self.job_contexts[jck].out()
 
         return ret
 
@@ -114,6 +105,21 @@ class TksJobContext:
         self.special_drops = 0
         self.materials = {}
         self.campaign_friend_checked = False
+        self.summon_option_checked = False
+
+    def out(self):
+        ret = collections.OrderedDict()
+        ret["config"] = self.job_config
+        ret["battle_completed"] = self.battle_completed
+        ret["battle_failed"] = self.battle_failed
+        ret["apple_used"] = self.apple_used
+        ret["total_turns"] = self.total_turns
+        ret["total_time"] = self.total_time
+        ret["avg_turns"] = TksContext.avg(self.total_turns, self.battle_completed + self.battle_failed)
+        ret["avg_time"] = TksContext.avg(self.total_time, self.battle_completed + self.battle_failed)
+        ret["special_drops"] = self.special_drops
+        ret["materials"] = self.materials
+        return ret
 
     def apple_remaining(self):
         return self.apple_used < self.apples()
@@ -159,3 +165,15 @@ class TksJobContext:
 
     def friend_class(self):
         return safe_get(self.job_config, 'friend_class')
+
+    def max_summon(self):
+        return safe_get(self.job_config, 'max_summon')
+
+    def max_synthesis(self):
+        return safe_get(self.job_config, 'max_synthesis')
+
+    def max_summon_special(self):
+        return safe_get(self.job_config, 'max_summon_special')
+
+    def target_summon_special(self):
+        return safe_get(self.job_config, 'target_summon_special')

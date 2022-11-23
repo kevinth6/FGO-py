@@ -11,6 +11,7 @@ from tksContext import TksContext, TksJobContext
 from tksBattle import TksBattle, TksBattleGroup, DefeatedException
 from fgoFuse import StuckException
 from tksCampaign import TksCampaign
+from tksExpBall import TksExpBall
 
 logger = getLogger('TksMain')
 
@@ -44,6 +45,8 @@ class TksMain:
                 logger.info('Click not continue')
             elif t.find_and_click(IMG.TKS_INTERRUPTED_BATTLE_ENTER, A_DIALOG_BUTTONS):
                 logger.info('Continue interrupted battle')
+            elif t.find_and_click_btn(B_MAIN_TL_CLOSE):
+                logger.info('Click back')
             elif t.isMainInterface():
                 self.common.close_all_dialogs()
                 break
@@ -69,16 +72,18 @@ class TksMain:
         # TksBattleGroup(context)()
         # TksCommon(self.config).scroll_and_click(IMG.TKS_FREE_DONE, A_INSTANCE_MENUS)
 
-        # self._cleanup()
-        context = TksContext(self.config, 'sufftechni')
-        context.current_job = 'campaign_cur'
-        context.save()
+        self._cleanup()
+        context = TksContext(self.config, 'extertena')
+        context.current_job = 'exp_ball_test'
+        TksCommon().back_to_top()
+        TksExpBall(context).summon_fp()
+        # context.save()
         # TksCommon().back_to_top()
         # TksCampaign(context)()
         # TksInterface(context).retrieve_week_awards()
 
         assert fgoDevice.device.available
-        # TksDetect()
+
         # TksBattleGroup(context).choose_friend()
         # TksCommon().handle_special_drop(TksDetect())
         # print(TksDetect().isAddFriend())
@@ -102,7 +107,7 @@ class TksMain:
                     itfc.retrieve_week_awards()
                     break
                 except (StuckException, FlowException) as ex:
-                    logger.error('Exception caught, ' + str(ex))
+                    logger.error(ex, exc_info=True, stack_info=True)
                     logger.info('Cleanup and continue')
                     self._cleanup()
                     times += 1
@@ -120,7 +125,7 @@ class TksMain:
                         logger.info("Finish running job " + job_name)
                         break
                     except (StuckException, FlowException) as ex:
-                        logger.error('Exception caught, ' + str(ex))
+                        logger.error(ex, exc_info=True, stack_info=True)
                         logger.info('Cleanup and continue')
                         self._cleanup()
                         times += 1
