@@ -152,21 +152,32 @@ class TksBattleGroup:
 
     def choose_friend(self):
         if self.is_free:
-            if not self.jc.campaign_friend_checked and (self.jc.campaign_servant() or self.jc.campaign_reisou()):
-                self._handle_campaign_friend_options()
-                self.jc.campaign_friend_checked = True
-            if self.jc.campaign_reisou() and (
-                    self.jc.campaign_reisou_idx() is not None or self.jc.campaign_reisou() == 2):
-                TksDetect().find_and_click(IMG.TKS_CLS_COMBINE, A_FRIEND_CLASSES, after_delay=2)
+            if not self.jc.friend_reisou():
+                if not self.jc.campaign_friend_checked and (self.jc.campaign_servant() or self.jc.campaign_reisou()):
+                    self._handle_campaign_friend_options()
+                    self.jc.campaign_friend_checked = True
+                if self.jc.campaign_reisou() and self.jc.campaign_reisou() == 2:
+                    self.common.click(PS_FRIEND_CLASSES['all'], after_delay=2)
+            if self.jc.friend_class() and self.jc.friend_class() in PS_FRIEND_CLASSES:
+                self.common.click(PS_FRIEND_CLASSES[self.jc.friend_class()], after_delay=1)
 
-        refresh = False
-        while not TksDetect(0, .3).isChooseFriend():
-            if TksDetect.cache.isNoFriend():
-                if refresh: schedule.sleep(10)
+        has_friend = True
+        while True:
+            t = TksDetect(.2, .3)
+            if t.isNoFriend() or not has_friend:
+                self.common.wait(IMG.TKS_FRIEND_REFRESH, A_FRIEND_OPTIONS_BAR)
                 fgoDevice.device.perform('\xBAK', (500, 1000))
-                refresh = True
-
-        return fgoDevice.device.press('8')
+                has_friend = True
+            else:
+                if self.jc.friend_reisou() and self.jc.friend_reisou() in FRIEND_REISOUS:
+                    if p := self.common.scroll_and_find(
+                            lambda t, i: t.find(FRIEND_REISOUS[self.jc.friend_reisou()], A_FRIEND_ICONS),
+                            end_pos=P_FRIEND_SCROLL_END, top_pos=P_FRIEND_SCROLL_TOP):
+                        return self.common.click(p)
+                    else:
+                        has_friend = False
+                else:
+                    return fgoDevice.device.press('8')
 
     def _handle_campaign_friend_options(self):
         t = TksDetect(.3, .3).cache
@@ -209,7 +220,7 @@ class TksBattleGroup:
                 return ret
             if TksDetect.cache.is_list_end(P_FRIEND_OPTION_SCROLL_END):
                 break
-            fgoDevice.device.swipe(A_SWIPE_FRIEND_DOWN)
+            fgoDevice.device.swipe(A_SWIPE_FRIEND_OPTION_DOWN)
             schedule.sleep(0.3)
 
     def _disable_all_reisou(self, t):

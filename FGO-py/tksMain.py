@@ -77,12 +77,12 @@ class TksMain:
         # TksInterface(context).retrieve_week_awards()
 
         assert fgoDevice.device.available
-        print(TksDetect().find(IMG.TKS_REWARD_AVAILABLE, A_TOP_RIGHT, threshold=0.02))
-        # TksBattleGroup(context).choose_friend()
+        # TksDetect()
+        TksBattleGroup(context).choose_friend()
         # TksCommon().handle_special_drop(TksDetect())
         # print(TksDetect().isAddFriend())
         # for i in range(10):
-        #     print(TksDetect().find_multiple(IMG.TKS_CAMPAIGN_NEXT, threshold=0.2))
+        #     print(TksDetect().find(FRIEND_REISOUS['exp'], A_FRIEND_ICONS))
 
         # self.do_run()
 

@@ -1,5 +1,5 @@
 import os, time, cv2, numpy, tqdm
-from fgoDetect import XDetect, coroutine, IMG
+from fgoDetect import XDetect, coroutine, IMG, CLASS
 from fgoSchedule import schedule
 from fgoFuse import fuse
 from fgoDevice import device
@@ -43,6 +43,12 @@ CLASSES_S = {
     i[:-4]: (lambda x: (x[..., :3], x[..., 3]))(
         cv2.imread(f'fgoImage/class_s/{i}', cv2.IMREAD_UNCHANGED)
     ) for i in os.listdir('fgoImage/class_s') if i.endswith('.png')
+}
+
+FRIEND_REISOUS = {
+    i[:-4]: (lambda x: (x[..., :3], x[..., 3]))(
+        cv2.imread(f'fgoImage/friend_reisou/{i}', cv2.IMREAD_UNCHANGED)
+    ) for i in os.listdir('fgoImage/friend_reisou') if i.endswith('.png')
 }
 
 
@@ -241,6 +247,8 @@ P_FRIEND_CAMPAIGN_SERVANT = (501, 216)
 P_FRIEND_CAMPAIGN_REISOU = (783, 221)
 P_FRIEND_OPTION_SCROLL_MID = (1084, 268)
 P_FRIEND_OPTION_SCROLL_END = (1084, 578)
+P_FRIEND_SCROLL_TOP = (1255, 186)
+P_FRIEND_SCROLL_END = (1255, 708)
 
 # Areas
 A_SUB_MENUS = (678, 108, 1278, 566)
@@ -270,5 +278,11 @@ A_AWARD_1ST_ICON = (1100, 284, 1212, 394)
 A_INSTANCE_TITLE = (690, 100, 1100, 600)
 A_FRIEND_OPTIONS_BAR = (726, 92, 1278, 166)
 A_FRIEND_SHOW_BUTTONS = (824, 40, 964, 586)
-A_SWIPE_FRIEND_DOWN = (950, 500, 950, 100)
+A_SWIPE_FRIEND_OPTION_DOWN = (950, 500, 950, 100)
 A_FRIEND_CLASSES = (45, 89, 741, 166)
+A_FRIEND_ICONS = (28, 165, 235, 718)
+
+PS_FRIEND_CLASSES = {
+    ['any', 'saber', 'archer', 'lancer', 'rider', 'caster', 'assassin', 'berserker', 'ex', 'all'][i]: (91 + i * 68, 128)
+    for i in range(10)
+}

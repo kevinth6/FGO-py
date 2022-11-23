@@ -19,7 +19,7 @@ class TksCommon:
         schedule.sleep(after_delay)
         return self
 
-    def wait(self, img, rect=(0, 0, 1280, 720), threshold=.05, interval=.3):
+    def wait(self, img, rect=(0, 0, 1280, 720), threshold=.05, interval=.5):
         while not TksDetect().appear(img, rect, threshold):
             schedule.sleep(interval)
         return self

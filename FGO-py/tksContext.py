@@ -109,3 +109,9 @@ class TksJobContext:
 
     def campaign_reisou_idx(self):
         return safe_get(self.job_config, 'campaign_reisou_idx')
+
+    def friend_reisou(self):
+        return safe_get(self.job_config, 'friend_reisou')
+
+    def friend_class(self):
+        return safe_get(self.job_config, 'friend_class')
