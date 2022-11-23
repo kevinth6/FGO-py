@@ -22,3 +22,4 @@ Log*.txt
 fgoConfig.json
 tksConfig.yaml
 **/accounts/*.png
+tksResult/
