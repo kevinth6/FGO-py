@@ -72,7 +72,7 @@ class TksCampaign:
                     return False
                 else:
                     flag = 0b11111111
-            elif flag & 0x20 and self.common.handle_special_drop(t):
+            elif flag & 0x20 and self.common.handle_special_drop(t, self.context):
                 flag = 0b10100111
             elif p := self.common.find_dialog_close(t):
                 logger.info('close dialog on ' + str(p))
@@ -212,7 +212,7 @@ class TksCampaign:
                     return False
                 else:
                     flag = 0b11111111
-            elif flag & 0x20 and self.common.handle_special_drop(t):
+            elif flag & 0x20 and self.common.handle_special_drop(t, self.context):
                 flag = 0b10100111
             elif p := self.common.find_dialog_close(t):
                 logger.info('close dialog on ' + str(p))
@@ -310,7 +310,7 @@ class TksCampaign:
             elif p := t.find(IMG.TKS_CAMPAIGN_REWARD_OFF, A_CAMPAIGN_REWARD_TABS):
                 logger.info('Not in reward view. Go to reward view')
                 t.click(p, after_delay=.7)
-            elif self.common.handle_special_drop(t):
+            elif self.common.handle_special_drop(t, self.context):
                 pass
             elif p := self.common.find_dialog_close(t):
                 t.click(p, after_delay=.7)

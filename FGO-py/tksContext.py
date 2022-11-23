@@ -1,4 +1,4 @@
-import copy
+import copy, time, yaml, os
 from tksCommon import FlowException, safe_get
 
 
@@ -46,11 +46,35 @@ class TksContext:
             raise FlowException("Can't get current job context, account: " + self.account + ", job: "
                                 + self.current_job)
 
-    def save(self):
-        pass
+    def save(self, path='tksResult'):
+        save_path = f"{path}/{self.account}"
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+        t = time.time()
+        name = time.strftime(f'{save_path}{f"/res_%Y-%m-%d_%H.%M.%S.{round(t * 1000) % 1000:03}"}.yaml')
+        with open(name, "w") as f:
+            yaml.dump(self.out(), f)
 
-    def load(self):
-        pass
+    def out(self):
+        total_comp = TksContext.sum_in_obj_dict(self.job_contexts, 'battle_completed')
+        total_fail = TksContext.sum_in_obj_dict(self.job_contexts, 'battle_failed')
+        materials = {}
+        for jck in self.job_contexts:
+            TksContext.dict_add(materials, self.job_contexts[jck].materials)
+
+        return {
+            "battle_completed": total_comp,
+            "battle_failed": total_fail,
+            "apple_used": TksContext.sum_in_obj_dict(self.job_contexts, 'apple_used'),
+            "total_turns": TksContext.sum_in_obj_dict(self.job_contexts, 'total_turns'),
+            "total_time": TksContext.sum_in_obj_dict(self.job_contexts, 'total_time'),
+            "avg_turns": TksContext.avg(TksContext.sum_in_obj_dict(self.job_contexts, 'total_turns'),
+                                        total_comp + total_fail),
+            "avg_time": TksContext.avg(TksContext.sum_in_obj_dict(self.job_contexts, 'total_time'),
+                                       total_comp + total_fail),
+            "special_drops": TksContext.sum_in_obj_dict(self.job_contexts, 'special_drops'),
+            "materials": materials
+        }
 
     @staticmethod
     def anonymous_context():
@@ -58,6 +82,21 @@ class TksContext:
         ret = TksContext(config, 'anonymous')
         ret.current_job = 'random-job'
         return ret
+
+    @staticmethod
+    def avg(total, count):
+        return (total / count) if count > 0 else 0
+
+    @staticmethod
+    def sum_in_obj_dict(obj_dict, key):
+        ret = 0
+        for dk in obj_dict:
+            ret += getattr(obj_dict[dk], key)
+        return ret
+
+    @staticmethod
+    def dict_add(merged, added):
+        return {i: merged.get(i, 0) + added.get(i, 0) for i in merged | added}
 
 
 class TksJobContext:
@@ -68,7 +107,8 @@ class TksJobContext:
         self.battle_failed = 0
         self.total_turns = 0
         self.total_time = 0
-        self.material = {}
+        self.special_drops = 0
+        self.materials = {}
         self.campaign_friend_checked = False
 
     def apple_remaining(self):

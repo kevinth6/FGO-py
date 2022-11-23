@@ -5,6 +5,7 @@ from fgoLogging import getLogger
 from tksDetect import *
 from tksCommon import FlowException, TksCommon
 from fgoKernel import Battle, Turn, withLock, lock, time
+from tksContext import TksContext
 
 logger = getLogger('TksBattle')
 
@@ -81,7 +82,7 @@ class TksBattleGroup:
             t = TksDetect().cache
             if t.isBattleContinue():
                 break
-            elif self.common.handle_special_drop(t):
+            elif self.common.handle_special_drop(t, self.context):
                 pass
             elif t.isAddFriend():
                 logger.info('add friend')
@@ -128,9 +129,8 @@ class TksBattleGroup:
                 self.jc.battle_completed += 1
                 self.jc.total_turns += result['turn']
                 self.jc.total_time += result['time']
-                self.jc.material = {i: self.jc.material.get(i, 0) + result['material'].get(i, 0)
-                                    for i in
-                                    self.jc.material | result['material']}
+                self.jc.materials = TksContext.dict_add(self.jc.materials, result['material'])
+
             fgoDevice.device.perform(' ', (600,))
             self.battle_completed()
         else:
@@ -180,14 +180,15 @@ class TksBattleGroup:
                     return fgoDevice.device.press('8')
 
     def _handle_campaign_friend_options(self):
+        logger.info('Handle campaign friend options')
         t = TksDetect(.3, .3).cache
         if p := (t.find(IMG.TKS_FRIEND_OPTIONS, A_FRIEND_OPTIONS_BAR)
                  or t.find(IMG.TKS_FRIEND_OPTIONS_ON, A_FRIEND_OPTIONS_BAR)):
-            t.click(p, after_delay=.7)
+            self.common.click_and_wait(p, IMG.TKS_DIALOG_DECIDE, A_DIALOG_BUTTONS)
         else:
             return
 
-        self.common.wait(IMG.TKS_DIALOG_DECIDE, A_DIALOG_BUTTONS)
+        logger.info('In campaign friend options dialog')
         self.common.click(P_FRIEND_OPTION_SCROLL_TOP, after_delay=.5)
         self.common.click(P_FRIEND_OPTION_RESET, after_delay=.5)
         if self.jc.campaign_servant():
@@ -199,13 +200,14 @@ class TksBattleGroup:
                 TksDetect(.3, .3).find_and_click(IMG.TKS_FRIEND_REISOU_MAX, after_delay=.5)
 
         if (idx := self.jc.campaign_reisou_idx()) is not None:
+            logger.info(f'Setup campaign reisou by idx {self.jc.campaign_reisou_idx()}')
             func = lambda t: self._disable_all_reisou(t)
             self._friend_option_scroll(func)
             reisou_imgs = []
             func = lambda t: self._scan_reisou(t, reisou_imgs)
             self._friend_option_scroll(func)
             if idx >= len(reisou_imgs):
-                logger.warning(f'Unable to find campaign reisou by index {idx}')
+                logger.warning(f'Unable to find the campaign reisou.')
             else:
                 func = lambda t: self._enable_reisou(t, reisou_imgs[idx])
                 self._friend_option_scroll(func, True)

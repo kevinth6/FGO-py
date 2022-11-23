@@ -24,20 +24,26 @@ class TksCommon:
             schedule.sleep(interval)
         return self
 
-    def wait_btn(self, button, interval=.3):
+    def click_and_wait(self, pos, img, rect=(0, 0, 1280, 720), threshold=.05, interval=.5):
+        self.click(pos, after_delay=interval)
+        while not TksDetect().appear(img, rect, threshold):
+            self.click(pos, after_delay=interval)
+        return self
+
+    def wait_btn(self, button, interval=.5):
         return self.wait(button.img, button.rect, button.threshold, interval)
 
-    def wait_and_click(self, img, rect=(0, 0, 1280, 720), threshold=.05, interval=.3, after_delay=.3):
+    def wait_and_click(self, img, rect=(0, 0, 1280, 720), threshold=.05, interval=.5, after_delay=.3):
         while not (p := TksDetect().find(img, rect, threshold)):
             schedule.sleep(interval)
 
         TksDetect.cache.click(p, after_delay)
         return self
 
-    def wait_and_click_btn(self, button, interval=.3, after_delay=.3):
+    def wait_and_click_btn(self, button, interval=.5, after_delay=.3):
         return self.wait_and_click(button.img, button.rect, button.threshold, interval, after_delay)
 
-    def wait_for_main_interface(self, interval=.3):
+    def wait_for_main_interface(self, interval=.5):
         while not TksDetect().isMainInterface():
             schedule.sleep(interval)
         return self
@@ -162,7 +168,8 @@ class TksCommon:
             return True
         return False
 
-    def handle_special_drop(self, t, fav=True):
+    def handle_special_drop(self, t, context, fav=True):
+        cjc = context.cur_job_context()
         if t.isSpecialDropSuspended():
             logger.info('Special dropped.')
             while fav and (p := t.find(IMG.TKS_FAV, A_LEFT_BUTTONS)):
@@ -170,6 +177,7 @@ class TksCommon:
                 t.click(p)
                 t = TksDetect().cache
             fgoDevice.device.perform('\x1B', (500,))
+            cjc.special_drops += 1
             return True
         else:
             return False

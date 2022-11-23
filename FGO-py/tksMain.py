@@ -70,21 +70,22 @@ class TksMain:
         # TksCommon(self.config).scroll_and_click(IMG.TKS_FREE_DONE, A_INSTANCE_MENUS)
 
         # self._cleanup()
-        context = TksContext(self.config, 'plawast')
+        context = TksContext(self.config, 'sufftechni')
         context.current_job = 'campaign_cur'
+        context.save()
         # TksCommon().back_to_top()
         # TksCampaign(context)()
         # TksInterface(context).retrieve_week_awards()
 
         assert fgoDevice.device.available
         # TksDetect()
-        TksBattleGroup(context).choose_friend()
+        # TksBattleGroup(context).choose_friend()
         # TksCommon().handle_special_drop(TksDetect())
         # print(TksDetect().isAddFriend())
         # for i in range(10):
         #     print(TksDetect().find(FRIEND_REISOUS['exp'], A_FRIEND_ICONS))
 
-        # self.do_run()
+        self.do_run()
 
     def do_run(self):
         """main run entry"""
@@ -130,6 +131,7 @@ class TksMain:
                 if times >= 3:
                     logger.error('Exception times exceed 3. Abandon this job, continue next')
 
+            context.save()
             logger.info("Finish running account " + account)
 
     def run_free(self, context, times):
@@ -151,5 +153,5 @@ class TksMain:
     parser_tks_run = parser_tks_.add_parser('run', help=do_run.__doc__)
 
     complete_table = {
-        '': ['find']
+        '': ['find', 'test', 'run']
     }
