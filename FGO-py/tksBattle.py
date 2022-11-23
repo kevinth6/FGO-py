@@ -155,7 +155,8 @@ class TksBattleGroup:
             if not self.jc.campaign_friend_checked and (self.jc.campaign_servant() or self.jc.campaign_reisou()):
                 self._handle_campaign_friend_options()
                 self.jc.campaign_friend_checked = True
-            if self.jc.campaign_reisou() and self.jc.campaign_reisou_idx() is not None:
+            if self.jc.campaign_reisou() and (
+                    self.jc.campaign_reisou_idx() is not None or self.jc.campaign_reisou() == 2):
                 TksDetect().find_and_click(IMG.TKS_CLS_COMBINE, A_FRIEND_CLASSES, after_delay=2)
 
         refresh = False

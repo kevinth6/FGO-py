@@ -61,10 +61,9 @@ class TksInterface:
             .wait_and_click(IMG.TKS_DIALOG_YES, A_DIALOG_BUTTONS)
         self._wait_for_start()
         self._select_account(account, 5)
-        schedule.sleep(1)
         i = 0
         while i < 3:
-            t = TksDetect(.5, .5).cache
+            t = TksDetect(.3, .3).cache
             if t.isTurnBegin():
                 logger.info('In battle')
                 TksBattleGroup(TksContext.anonymous_context(), run_once=True)()

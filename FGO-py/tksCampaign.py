@@ -39,6 +39,7 @@ class TksCampaign:
             skip_main = cjc.skip_main()
         ret = True
         if not skip_main:
+            schedule.sleep(2)
             ret = self._run_main_tasks()
         else:
             logger.info('Main task skipped on required.')
@@ -133,6 +134,10 @@ class TksCampaign:
             return ret
 
         self.regular_free = self._filter_free_instances(self.regular_free + self.first_free)
+        if len(self.regular_free) == 0:
+            logger.info('No regular free to run')
+            return True
+
         bak_instances = []
         while True:
             idx = random.randint(0, len(self.regular_free) - 1)
@@ -156,9 +161,9 @@ class TksCampaign:
         self.common.click(P_CUR_CAMPAIGN, after_delay=1)
         while not TksDetect(.5, .5).is_on_map():
             pass
-        schedule.sleep(3)
+        schedule.sleep(2)
 
-        if p := t.find(IMG.TKS_REWARD_AVAILABLE, A_TOP_RIGHT, threshold=.02):
+        if p := TksDetect(.5, .5).find(IMG.TKS_REWARD_AVAILABLE, A_TOP_RIGHT, threshold=.02):
             logger.info('Found available rewards. Go to reward view.')
             t.click(p)
             return 0b00000101
@@ -232,7 +237,8 @@ class TksCampaign:
         ret = []
         cjc = self.context.cur_job_context()
         for instance in instances:
-            if cjc.level() != instance.level or cjc.cls() != instance.cls:
+            if cjc.level() is not None and cjc.level() != instance.level or \
+                    cjc.cls() is not None and cjc.cls() != instance.cls:
                 pass
             else:
                 ret.append(instance)
@@ -339,11 +345,13 @@ class TksCampaign:
         ret = self._find_free_instance(t, IMG.TKS_INSTANCE_BRONZE, mps, mpp, mus, mpimg, 1, True) or ret
         ret = self._find_free_instance(t, IMG.TKS_INSTANCE_SILVER, mps, mpp, mus, mpimg, 2, True) or ret
         ret = self._find_free_instance(t, IMG.TKS_INSTANCE_GOLD, mps, mpp, mus, mpimg, 3, True) or ret
+        ret = self._find_free_instance(t, IMG.TKS_INSTANCE_GREEN, mps, mpp, mus, mpimg, 4, True) or ret
 
         # ret = self._find_free_instance(t, IMG.TKS_INSTANCE_BRONZE_DONE, mps, map_pos, menu_scroll, 1) or ret
         ret = self._find_free_instance(t, IMG.TKS_INSTANCE_SILVER_DONE, mps, mpp, mus, mpimg, 2) or ret
         ret = self._find_free_instance(t, IMG.TKS_INSTANCE_GOLD_DONE, mps, mpp, mus, mpimg, 3) or ret
-        # ret = self._find_free_instance(t, IMG.TKS_INSTANCE_GREEN, mps, map_pos, menu_scroll, 4) or ret
+        ret = self._find_free_instance(t, IMG.TKS_INSTANCE_GREEN_DONE, mps, mpp, mus, mpimg, 4) or ret
+
         return ret
 
     def _find_free_instance(self, t, img, map_screen, map_pos, menu_scroll, map_img, level, first=False):
