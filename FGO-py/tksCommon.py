@@ -7,14 +7,14 @@ from tksDetect import *
 logger = getLogger('TksCommon')
 
 FlowException = type('FlowException', (Exception,), {})
-
-
-def safe_get(dict, name):
-    return dict[name] if name in dict else None
+AbandonException = type('AbandonException', (Exception,), {})
 
 
 class TksCommon:
-    def click(self, pos, after_delay=0.5):
+    def click(self, pos, after_delay=0.5, offset=None):
+        if offset:
+            clp = lambda value, minv, maxv: max(min(value, maxv), minv)
+            pos = (clp(pos[0] + offset[0], 0, 1280), clp(pos[1] + offset[1], 0, 720))
         device.touch(pos)
         schedule.sleep(after_delay)
         return self
@@ -34,14 +34,14 @@ class TksCommon:
     def wait_btn(self, button, interval=.5):
         return self.wait(button.img, button.rect, button.threshold, interval)
 
-    def wait_and_click(self, img, rect=(0, 0, 1280, 720), threshold=.05, interval=.5, after_delay=.3):
+    def wait_and_click(self, img, rect=(0, 0, 1280, 720), threshold=.05, interval=.5, after_delay=.5):
         while not (p := TksDetect().find(img, rect, threshold)):
             schedule.sleep(interval)
 
         TksDetect.cache.click(p, after_delay)
         return self
 
-    def wait_and_click_btn(self, button, interval=.5, after_delay=.3):
+    def wait_and_click_btn(self, button, interval=.5, after_delay=.5):
         return self.wait_and_click(button.img, button.rect, button.threshold, interval, after_delay)
 
     def wait_for_main_interface(self, interval=.5):
@@ -229,18 +229,26 @@ class TksCommon:
 
     def go_on_map_and_menu(self, map_img, menu_img, map_screen, map_pos, menu_scroll, menu_pos):
         """search by images first, if not found, search by swipe and pos"""
-        if not (p := self.swipe_on_map_and_do(lambda t, st: t.find(map_img, threshold=.1))):
+        if p := self.swipe_on_map_and_do(lambda t, st: t.find(map_img, threshold=.1)):
+            p = self.click_and_wait_for_menu_view(p)
+
+        if not p:
             logger.info(f'find map location by screen {map_screen} and pos {map_pos}')
             self._pinch_and_swipe_down()
             for i in range(map_screen):
                 fgoDevice.device.swipe(A_SWIPE_CENTER_UP)
                 schedule.sleep(1)
-            p = map_pos
-        self.click_and_wait_for_menu_view(p)
-        if not (p := self.scroll_and_find(lambda t, i: t.find(menu_img, A_INSTANCE_TITLE, threshold=.01))):
-            logger.info(f'find menu location by scroll {menu_scroll} and pos {menu_pos}')
-            for i in range(menu_scroll):
-                fgoDevice.device.swipe(A_SWIPE_RIGHT_DOWN)
-                schedule.sleep(.5)
-            p = menu_pos
-        self.click(p, after_delay=.7)
+            p = self.click_and_wait_for_menu_view(map_pos)
+
+        if p:
+            if not (p := self.scroll_and_find(lambda t, i: t.find(menu_img, A_INSTANCE_TITLE, threshold=.01))):
+                logger.info(f'find menu location by scroll {menu_scroll} and pos {menu_pos}')
+                for i in range(menu_scroll):
+                    fgoDevice.device.swipe(A_SWIPE_RIGHT_DOWN)
+                    schedule.sleep(.5)
+                p = menu_pos
+            self.click(p, after_delay=.7)
+            return True
+        else:
+            logger.warning(f"Can't open section menu")
+            return False

@@ -65,6 +65,7 @@ def clamp_rect(rect):
 
 class Button:
     def __init__(self, center, img_name=None, size=(0, 0), threshold=.08, padding=2):
+        """size is half of button width and height"""
         self.center = center
         if img_name:
             png = INTERFACES[img_name]
@@ -137,21 +138,21 @@ class TksDetect(XDetect):
     def find_btn(self, button):
         return self.find(button.img, button.rect, button.threshold)
 
-    def click(self, pos, after_delay=0.3):
+    def click(self, pos, after_delay=0.5):
         device.touch(pos)
         schedule.sleep(after_delay)
         return self
 
-    def find_and_click(self, img, rect=(0, 0, 1280, 720), threshold=.05, after_delay=0.3, retry=0):
+    def find_and_click(self, img, rect=(0, 0, 1280, 720), threshold=.05, after_delay=0.5, retry=0):
         for i in range(retry + 1):
             if pos := self.find(img, rect, threshold):
                 self.click(pos, after_delay)
                 break
-            else:
+            elif retry > 0:
                 schedule.sleep(after_delay)
         return pos is not None
 
-    def find_and_click_btn(self, button, after_delay=0.3, retry=0):
+    def find_and_click_btn(self, button, after_delay=0.5, retry=0):
         return self.find_and_click(button.img, button.rect, button.threshold, after_delay, retry)
 
     def is_on_top(self):
@@ -179,43 +180,43 @@ class TksDetect(XDetect):
 
 # buttons borrowed from FGO-ExpBall
 P_SPACE = (1231, 687)
-BACK = Button((38, 43), 'summon_continue', (10, 10))
+B_BACK = Button((38, 43), 'summon_continue', (10, 10))
 P_MAIN_MAIN = (137, 596)
 P_MAIN_ARCHIVE = (304, 596)
 P_MAIN_SYNTHESIS = (472, 596)
-MAIN_SUMMON = Button((640, 596), 'main', (25, 25))
-SUMMON_FP = Button((672, 42), 'summon_continue', (15, 15))
+B_MAIN_SUMMON = Button((640, 596), 'main', (25, 25))
+B_SUMMON_FP = Button((672, 42), 'summon_continue', (15, 15))
 P_SUMMON_SWITCH = (45, 360)
 P_SUMMON_SUMMON = (733, 526)
-SUMMON_SUBMIT = Button((837, 564), 'summon_submit', (27, 14))
-SUMMON_CONTINUE = Button((762, 673), 'summon_continue', (104, 14))
-SUMMON_SALE = Button((345, 477), 'summon_sale', (27, 14))
+B_SUMMON_SUBMIT = Button((837, 564), 'summon_submit', (27, 14))
+B_SUMMON_CONTINUE = Button((762, 673), 'summon_continue', (104, 14))
+B_SUMMON_SALE = Button((345, 477), 'summon_sale', (27, 14))
 P_SELECT_SERVANT = (101, 128)
 P_SELECT_REISOU = (288, 128)
 P_SELECT_CODE = (475, 128)
-SELECT_GIRD = Button((28, 677), 'sort', (21, 21))
-SELECT_FINISH = Button((1153, 673), 'lock', (27, 12))
-SELECT_LOCK = Button((74, 246), 'lock', (6, 8), .13, 4)
-FILTER_EVENT = Button((804, 130), 'lock', (80, 18))
+B_SELECT_GIRD = Button((28, 677), 'sort', (21, 21))
+B_SELECT_FINISH = Button((1153, 673), 'lock', (27, 12))
+B_SELECT_LOCK = Button((74, 246), 'lock', (6, 8), .13, 4)
+B_FILTER_EVENT = Button((804, 130), 'lock', (80, 18))
 P_FILTER_FILTER = (980, 130)
 P_FILTER_SCROLL = (1135, 565)
 P_FILTER_EXP = (639, 385)
 P_FILTER_FOU = (852, 385)
 P_FILTER_RESET = (227, 641)
-FILTER_SUBMIT = Button((1054, 638), 'filter', (20, 65))
+B_FILTER_SUBMIT = Button((1054, 638), 'filter', (20, 65))
 P_FILTER_CANCEL = (820, 638)
 P_SORT_SORT = (1128, 130)
-SORT_DEC = Button((1248, 132), 'sort', (15, 12))
+B_SORT_DEC = Button((1248, 132), 'sort', (15, 12))
 P_SORT_BYTIME = (742, 384)
 P_SORT_BYLEVEL = (318, 232)
 P_SORT_BYRANK = (430, 322)
-SORT_FILTER_ON = Button((578, 474), 'sort', (12, 12))
+B_SORT_FILTER_ON = Button((578, 474), 'sort', (12, 12))
 P_SORT_SUBMIT = (853, 638)
-SELL_RESULT = Button((640, 629), 'result', (40, 20))
+B_SELL_RESULT = Button((640, 629), 'result', (40, 20))
 P_SYNTHESIS_SYNTHESIS = (958, 474)
-SYNTHESIS_LOAD = Button((195, 382), 'synthesis', (80, 80))
+B_SYNTHESIS_LOAD = Button((195, 382), 'synthesis', (80, 80))
 P_SYNTHESIS_SELECT = (30, 240)
-P_SYNTHESIS_LOCK = (30, 354)
+# P_SYNTHESIS_LOCK = (30, 354) this position is strictly disabled, never touch
 P_SYNTHESIS_ENTER = (864, 242)
 P_ARCHIVE_ARCHIVE = (958, 627)
 P_ARCHIVE_SUBMIT = (836, 602)
@@ -227,20 +228,22 @@ B_TOP_NOTICE = Button((88, 42), 'top_interface', (55, 13))
 B_MAIN_MENU_CLOSE = Button((1186, 475), 'main', (83, 23))
 B_FRIEND_TL_BACK = Button((88, 42), 'friend_formation', (55, 13))
 B_NOTICE = Button((636, 36), 'notice', (89, 17))
-B_SUMMON_AUTO_SALE = Button((642, 465), 'summon_submit', (190, 40))
-B_FILTER_STAR_3_ON = Button((642, 235), 'filter2', (60, 50))
-B_FILTER_STAR_2_ON = Button((831, 235), 'filter', (60, 50))
-B_FILTER_STAR_1_ON = Button((1019, 235), 'filter', (60, 50))
-B_FILTER_STAR_3_OFF = Button((642, 235), 'filter', (60, 50))
-B_FILTER_STAR_2_OFF = Button((831, 235), 'filter2', (60, 50))
-B_FILTER_STAR_1_OFF = Button((1019, 235), 'filter2', (60, 50))
+B_SUMMON_AUTO_SALE = Button((642, 465), 'summon_submit', (85, 20))
+B_FILTER_STAR_3_ON = Button((642, 235), 'filter2', (30, 25))
+B_FILTER_STAR_2_ON = Button((831, 235), 'filter', (30, 25))
+B_FILTER_STAR_1_ON = Button((1019, 235), 'filter', (30, 25))
+B_FILTER_STAR_3_OFF = Button((642, 235), 'filter', (30, 25))
+B_FILTER_STAR_2_OFF = Button((831, 235), 'filter2', (30, 25))
+B_FILTER_STAR_1_OFF = Button((1019, 235), 'filter2', (30, 25))
+B_SORT_FAV_ON = B_SORT_FILTER_ON.offset(442, 0)
+B_SYNTHESIS_BTN_DISABLED = Button((1143, 670), 'synthesis', (85, 20))
 
 P_CENTER = (640, 360)
 P_NOTICE_CLOSE = (1242, 36)
-P_TL_BUTTON = (95, 42)
+P_TL_BUTTON = (48, 42)
 P_MAIN_MENU = (1186, 652)
 P_MENU_ROOM = (1142, 602)
-P_MENU_ENHANCE = (475, 602)
+P_MENU_SHOP = (807, 602)
 P_RIGHT_SCROLL_END = (1257, 590)
 P_BATTLE_OPTION = (1194, 200)
 P_BATTLE_OPTION_CLOSE = (1105, 165)
@@ -261,10 +264,19 @@ P_FRIEND_OPTION_SCROLL_MID = (1084, 268)
 P_FRIEND_OPTION_SCROLL_END = (1084, 578)
 P_FRIEND_SCROLL_TOP = (1255, 186)
 P_FRIEND_SCROLL_END = (1255, 708)
+P_SYNTHESIS_SERVANT = (958, 174)
+P_SERVANT_OPTION_SERVANT = (430, 378)
+P_SERVANT_OPTION_EXP = (642, 378)
+P_SERVANT_OPTION_FOU = (862, 378)
+P_MENU_BURNING = P_SYNTHESIS_SYNTHESIS
+P_OPTIONS_SCROLL_START = (1135, 116)
+P_OPTIONS_SCROLL_END = (1135, 561)
+P_NOT_MAX_LEVEL = (323, 295)
 
 # Areas
 A_SUB_MENUS = (678, 108, 1278, 566)
 A_TL_BUTTONS = (8, 8, 240, 120)
+A_BR_BUTTONS = (980, 566, 1278, 718)
 A_INSTANCE_MENUS = (614, 90, 1240, 600)
 A_INSTANCE_MENUS_RIGHT = (1020, 90, 1240, 600)
 A_DIALOG_BUTTONS = (156, 420, 1080, 680)
@@ -293,6 +305,10 @@ A_FRIEND_SHOW_BUTTONS = (824, 40, 964, 586)
 A_SWIPE_FRIEND_OPTION_DOWN = (950, 500, 950, 100)
 A_FRIEND_CLASSES = (45, 89, 741, 166)
 A_FRIEND_ICONS = (28, 165, 235, 718)
+A_SERVANT_LEVEL_MAX_NOTICE = (1000, 472, 1238, 535)
+A_SUMMON_OPTION_EXP = (319, 229, 984, 315)
+A_SUMMON_OPTION_FOU = (319, 309, 984, 400)
+A_SUMMON_OPTION_REISOU = (319, 389, 984, 485)
 
 PS_FRIEND_CLASSES = {
     ['any', 'saber', 'archer', 'lancer', 'rider', 'caster', 'assassin', 'berserker', 'ex', 'all'][i]: (91 + i * 68, 128)

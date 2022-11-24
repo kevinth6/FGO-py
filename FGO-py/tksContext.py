@@ -1,5 +1,9 @@
 import copy, time, yaml, os, collections, json
-from tksCommon import FlowException, safe_get
+from tksCommon import FlowException
+
+
+def safe_get(dict, name):
+    return dict[name] if name in dict else None
 
 
 class TksContext:
@@ -102,10 +106,17 @@ class TksJobContext:
         self.battle_failed = 0
         self.total_turns = 0
         self.total_time = 0
+        self.summon_count = 0
         self.special_drops = 0
         self.materials = {}
         self.campaign_friend_checked = False
         self.summon_option_checked = False
+        self.synthesis_reisou_checked = False
+        self.synthesis_reisou_food_checked = False
+        self.synthesis_servant_checked = False
+        self.synthesis_servant_food_checked = False
+        self.servant_burning_checked = False
+        self.code_burning_checked = False
 
     def out(self):
         ret = collections.OrderedDict()
@@ -117,6 +128,7 @@ class TksJobContext:
         ret["total_time"] = self.total_time
         ret["avg_turns"] = TksContext.avg(self.total_turns, self.battle_completed + self.battle_failed)
         ret["avg_time"] = TksContext.avg(self.total_time, self.battle_completed + self.battle_failed)
+        ret["summon_count"] = self.summon_count
         ret["special_drops"] = self.special_drops
         ret["materials"] = self.materials
         return ret
@@ -125,55 +137,80 @@ class TksJobContext:
         return self.apple_used < self.apples()
 
     def apples(self):
+        """apple to eat in battle"""
         return safe_get(self.job_config, 'apples')
 
     def skip_main(self):
+        """skip the task running in campaign"""
         return safe_get(self.job_config, 'skip_main')
 
     def team_index(self):
+        """specify the team index in any battle, the highest priority"""
         return safe_get(self.job_config, 'team_index')
 
     def easy_mode(self):
+        """indicate if the battles in the job is easy, may affect the team to use"""
         return safe_get(self.job_config, 'easy_mode')
 
     def chapter(self):
+        """the chapter in free running"""
         return safe_get(self.job_config, 'chapter')
 
     def section(self):
+        """the section in free running"""
         return safe_get(self.job_config, 'section')
 
     def instance(self):
+        """the instance in free running"""
         return safe_get(self.job_config, 'instance')
 
     def level(self):
+        """specify the level of free instances in campaign, 1 bronze, 2 silver, 3 gold, 4 green"""
         return safe_get(self.job_config, 'level')
 
     def cls(self):
+        """specify the cls of free instances in campaign, could be saber, lancer, etc."""
         return safe_get(self.job_config, 'cls')
 
     def campaign_servant(self):
+        """should select the campaign servant in the friend selection options"""
         return safe_get(self.job_config, 'campaign_servant')
 
     def campaign_reisou(self):
+        """should select the campaign reisou in the friend selection options"""
         return safe_get(self.job_config, 'campaign_reisou')
 
     def campaign_reisou_idx(self):
+        """specify which campaign reisou to enable in the friend selection options, will disable all other,
+        the index starts from 0, from top to bottom"""
         return safe_get(self.job_config, 'campaign_reisou_idx')
 
     def friend_reisou(self):
+        """specify the reisou in the friend selection, name of images in friend_reisou,
+        will disable campaign_reisou & campaign_reisou_idx if set"""
         return safe_get(self.job_config, 'friend_reisou')
 
     def friend_class(self):
+        """specify the class in the friend selection, could be saber, lancer, etc."""
         return safe_get(self.job_config, 'friend_class')
 
     def max_summon(self):
+        """max summon count in exp_ball"""
         return safe_get(self.job_config, 'max_summon')
 
     def max_synthesis(self):
+        """max synthesis count in exp_ball, if not set, 20 by default"""
         return safe_get(self.job_config, 'max_synthesis')
 
     def max_summon_special(self):
+        """max special drops in exp_ball, if not set, 4 by default"""
         return safe_get(self.job_config, 'max_summon_special')
 
     def target_summon_special(self):
+        """specify which special drop to count for max_summon_special, name of imgs in summon_special"""
         return safe_get(self.job_config, 'target_summon_special')
+
+    def disable_burning(self):
+        """disable the servant and command code burning in exp_ball, this will cause the servant position quick filled up.
+        should only be used when you need more low star servants to maximum Hogu"""
+        return safe_get(self.job_config, 'disable_burning')

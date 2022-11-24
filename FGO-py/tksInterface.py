@@ -61,6 +61,8 @@ class TksInterface:
             .wait_and_click(IMG.TKS_DIALOG_YES, A_DIALOG_BUTTONS)
         self._wait_for_start()
         self._select_account(account, 5)
+
+        logger.info('Account login post process')
         i = 0
         while i < 3:
             t = TksDetect(.3, .3).cache

@@ -5,10 +5,10 @@ from fgoLogging import getLogger
 from tksDetect import *
 import fgoDevice, fgoSchedule
 from fgoDetect import Detect, IMG
-from tksCommon import TksCommon, safe_get, FlowException
+from tksCommon import TksCommon, FlowException, AbandonException
 from tksInterface import TksInterface
 from tksContext import TksContext, TksJobContext
-from tksBattle import TksBattle, TksBattleGroup, DefeatedException
+from tksBattle import TksBattleGroup
 from fgoFuse import StuckException
 from tksCampaign import TksCampaign
 from tksExpBall import TksExpBall
@@ -45,8 +45,6 @@ class TksMain:
                 logger.info('Click not continue')
             elif t.find_and_click(IMG.TKS_INTERRUPTED_BATTLE_ENTER, A_DIALOG_BUTTONS):
                 logger.info('Continue interrupted battle')
-            elif t.find_and_click_btn(B_MAIN_TL_CLOSE):
-                logger.info('Click back')
             elif t.isMainInterface():
                 self.common.close_all_dialogs()
                 break
@@ -55,7 +53,8 @@ class TksMain:
             elif p := self.common.find_dialog_close(t):
                 t.click(p)
             else:
-                fgoDevice.device.perform('\xBB', (500,))
+                self.common.click(P_TL_BUTTON, after_delay=.3)
+                fgoDevice.device.perform('\xBB', (300,))
             schedule.sleep(.5)
 
     def do_find(self):
@@ -76,7 +75,8 @@ class TksMain:
         context = TksContext(self.config, 'extertena')
         context.current_job = 'exp_ball_test'
         TksCommon().back_to_top()
-        TksExpBall(context).summon_fp()
+        TksExpBall(context).burning()
+        # TksExpBall(context).synthesis_servant()
         # context.save()
         # TksCommon().back_to_top()
         # TksCampaign(context)()
@@ -106,7 +106,7 @@ class TksMain:
                     TksCommon().back_to_top()
                     itfc.retrieve_week_awards()
                     break
-                except (StuckException, FlowException) as ex:
+                except Exception as ex:
                     logger.error(ex, exc_info=True, stack_info=True)
                     logger.info('Cleanup and continue')
                     self._cleanup()
@@ -129,8 +129,9 @@ class TksMain:
                         logger.info('Cleanup and continue')
                         self._cleanup()
                         times += 1
-                    except DefeatedException:
-                        logger.error('Defeated too many times. Abandon this job, continue next')
+                    except AbandonException as ex:
+                        logger.error(ex, exc_info=True, stack_info=True)
+                        logger.error('Abandon this job, continue next')
                         self._cleanup()
                         break
                 if times >= 3:

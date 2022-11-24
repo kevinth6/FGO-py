@@ -3,13 +3,12 @@ import fgoSchedule
 from fgoDetect import IMG
 from fgoLogging import getLogger
 from tksDetect import *
-from tksCommon import FlowException, TksCommon
+from tksCommon import FlowException, TksCommon, AbandonException
 from fgoKernel import Battle, Turn, withLock, lock, time
 from tksContext import TksContext
 
 logger = getLogger('TksBattle')
 
-DefeatedException = type('DefeatedException', (Exception,), {})
 MAX_DEFEATED_TIMES = 2
 
 
@@ -67,7 +66,7 @@ class TksBattleGroup:
         return True
 
     def choose_team(self):
-        if team_index := self.jc.team_index():
+        if (team_index := self.jc.team_index()) is not None:
             pass
         elif self.jc.easy_mode():
             team_index = 2
@@ -139,7 +138,7 @@ class TksBattleGroup:
             fgoDevice.device.perform('CI', (1000, 1000,))
             self.common.click(P_FAIL_CLOSE, 1)
             if self.jc.battle_failed > MAX_DEFEATED_TIMES:
-                raise DefeatedException()
+                raise AbandonException()
 
         # handle battle continue
         if TksDetect().isBattleContinue():
@@ -156,8 +155,6 @@ class TksBattleGroup:
                 if not self.jc.campaign_friend_checked and (self.jc.campaign_servant() or self.jc.campaign_reisou()):
                     self._handle_campaign_friend_options()
                     self.jc.campaign_friend_checked = True
-                if self.jc.campaign_reisou() and self.jc.campaign_reisou() == 2:
-                    self.common.click(PS_FRIEND_CLASSES['all'], after_delay=2)
             if self.jc.friend_class() and self.jc.friend_class() in PS_FRIEND_CLASSES:
                 self.common.click(PS_FRIEND_CLASSES[self.jc.friend_class()], after_delay=1)
 
@@ -200,7 +197,7 @@ class TksBattleGroup:
                 TksDetect(.3, .3).find_and_click(IMG.TKS_FRIEND_REISOU_MAX, after_delay=.5)
 
         if (idx := self.jc.campaign_reisou_idx()) is not None:
-            logger.info(f'Setup campaign reisou by idx {self.jc.campaign_reisou_idx()}')
+            logger.info(f'Setup campaign reisou by idx {idx}')
             func = lambda t: self._disable_all_reisou(t)
             self._friend_option_scroll(func)
             reisou_imgs = []

@@ -5,7 +5,7 @@ import fgoSchedule
 from fgoDetect import IMG
 from fgoLogging import getLogger
 from tksDetect import *
-from tksCommon import TksCommon, FlowException, safe_get, clamp_rect
+from tksCommon import TksCommon, clamp_rect
 from tksBattle import TksBattleGroup
 
 logger = getLogger('TksCampaign')
@@ -38,7 +38,7 @@ class TksCampaign:
             skip_main = cjc.skip_main()
         ret = True
         if not skip_main:
-            schedule.sleep(2)
+            schedule.sleep(3)
             ret = self._run_main_tasks()
         else:
             logger.info('Main task skipped on required.')
@@ -161,7 +161,7 @@ class TksCampaign:
         self.common.click(P_CUR_CAMPAIGN, after_delay=1)
         while not TksDetect(.5, .5).is_on_map():
             pass
-        schedule.sleep(2)
+        schedule.sleep(3)
 
         if p := TksDetect(.5, .5).find(IMG.TKS_REWARD_AVAILABLE, A_TOP_RIGHT, threshold=.02):
             logger.info('Found available rewards. Go to reward view.')

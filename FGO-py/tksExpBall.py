@@ -5,28 +5,36 @@ import fgoSchedule
 from fgoDetect import IMG
 from fgoLogging import getLogger
 from tksDetect import *
-from tksCommon import TksCommon, FlowException, safe_get, clamp_rect
+from tksCommon import TksCommon, FlowException, AbandonException
 
 logger = getLogger('TksExpBall')
 
+DFLT_MAX_SYNTHESIS = 20
+DFLT_MAX_SUMMON_SPECIAL = 4
+
+
+# some big differences from original ExpBall,
+# 1. add servant synthesis
+# 2. in burning only sell servants, not dog food or Fou
+# 3. reisou synthesis never auto lock star 1 reisous. You have to manually lock + fav some before running.
 
 class TksExpBall:
     def __init__(self, context):
         self.common = TksCommon()
         self.context = context
-        self.summon_count = 0
         self.synthesis_count = 0
         self.summon_special_count = 0
-        cjc = self.context.cur_job_context()
-        self.max_synthesis = cjc.max_synthesis() or 20
-        self.max_summon_special = cjc.max_summon_special() or 4
+        self.jc = self.context.cur_job_context()
+        self.max_synthesis = self.jc.max_synthesis() or DFLT_MAX_SYNTHESIS
+        self.max_summon_special = self.jc.max_summon_special() or DFLT_MAX_SUMMON_SPECIAL
 
     def __call__(self):
         logger.info('ExpBall Start.')
         while self.synthesis_count < self.max_synthesis:
             if not self.summon_fp():
                 break
-            self.sale_servant()
+            if not self.jc.disable_burning():
+                self.burning()
             self.synthesis_servant()
             self.synthesis_reisou()
             self.synthesis_count += 1
@@ -34,61 +42,288 @@ class TksExpBall:
         logger.info('ExpBall End.')
 
     def summon_fp(self):
-        cjc = self.context.cur_job_context()
-
-        self.common.go_menu(MAIN_SUMMON.center)
-        while not TksDetect().appear_btn(SUMMON_FP):
+        logger.info('Summon FP Start.')
+        self.common.go_menu(B_MAIN_SUMMON.center)
+        while not TksDetect().appear_btn(B_SUMMON_FP):
             self.common.click(P_SUMMON_SWITCH, after_delay=1.5)
-
         while not TksDetect().appear_btn(B_SUMMON_AUTO_SALE):
             self.common.click(P_SUMMON_SUMMON, after_delay=1)
-        if not cjc.summon_option_checked:
-            self._handle_summon_option()
 
-        while not cjc.max_summon() or self.summon_count < cjc.max_summon():
+        if not self.jc.summon_option_checked:
+            self._handle_summon_option()
+            self.jc.summon_option_checked = True
+
+        while not self.jc.max_summon() or self.jc.summon_count < self.jc.max_summon():
             t = TksDetect()
             if t.appear_btn(B_SUMMON_AUTO_SALE):
-                self.summon_count += 1
-                logger.info(f'Summon {self.summon_count}.')
-                t.click(SUMMON_SUBMIT.center, after_delay=3)
-            elif p := t.find_btn(SUMMON_SALE):
+                self.jc.summon_count += 1
+                logger.info(f'Summon {self.jc.summon_count}.')
+                t.click(B_SUMMON_SUBMIT.center, after_delay=3)
+            elif p := t.find_btn(B_SUMMON_SALE):
                 logger.info('Have to sale. Exit this round of summon.')
                 self.common.click(p, after_delay=3)
                 return True
-            elif t.appear_btn(SUMMON_CONTINUE):
+            elif t.appear_btn(B_SUMMON_CONTINUE):
                 for i in range(10):
-                    if not (s := self._find_special(t, i)):
-                        continue
-                    logger.info(f'Summon special found: {s[0]}')
-                    self.common.click(s[1], after_delay=1.5)
-                    # self.common.click_and_wait(s[1], IMG.TKS_FAV, A_LEFT_BUTTONS, interval=2)
-                    self.common.handle_special_drop(TksDetect(), self.context)
-                    if cjc.target_summon_special():
-                        if s[0] == cjc.target_summon_special():
-                            self.summon_special_count += 1
+                    if s := self._find_special(t, i):
+                        logger.info(f'Summon special found: {s[0]}')
+                        if not self._handle_summon_special(s[0], s[1]):
+                            return False
                     else:
-                        self.summon_special_count += 1
-                    if self.summon_special_count >= self.max_summon_special:
-                        self.common.click(P_TL_BUTTON, after_delay=1.5)
-                        return False
-
+                        continue
                 schedule.sleep(.7)
-                self.common.click(SUMMON_CONTINUE.center)
+                self.common.click(B_SUMMON_CONTINUE.center)
             else:
                 t.click(P_SPACE, after_delay=.4)
 
-    def sale_servant(self):
-        pass
+    def burning(self):
+        logger.info('Burning start.')
+        if TksDetect().appear_btn(B_MAIN_SUMMON):
+            self.common.click(B_MAIN_SUMMON.center, 3)
+        else:
+            self.common.back_to_top()
+            self.common.go_menu(P_MENU_SHOP)
+            self.common.click(P_MENU_BURNING, 3)
+        self.common.wait_btn(B_SELECT_FINISH)
+
+        logger.info('Burn servants.')
+        self.common.click(P_SELECT_SERVANT)
+        if not self.jc.servant_burning_checked:
+            self._handle_servant_burning_option()
+            self.jc.servant_burning_checked = True
+        self._burn_all()
+
+        logger.info('Burn command code.')
+        self.common.click(P_SELECT_CODE)
+        if not self.jc.code_burning_checked:
+            self._handle_code_burning_option()
+            self.jc.code_burning_checked = True
+        self._burn_all()
 
     def synthesis_servant(self):
-        pass
+        logger.info('Synthesis servant Start.')
+        self.common.back_to_top()
+        self.common.go_menu(P_MAIN_SYNTHESIS)
+        self.common.click(P_SYNTHESIS_SERVANT, 3)
+        self.common.wait_btn(B_SYNTHESIS_LOAD)
+
+        offset_x = 60
+        while True:
+            self.common.click(B_SYNTHESIS_LOAD.center, 3)
+            if not self.jc.synthesis_servant_checked:
+                self._handle_synthesis_servant_option()
+                self.jc.synthesis_servant_checked = True
+
+            self.common.click(B_SELECT_LOCK.offset(offset_x, 0).center, after_delay=2)
+            if TksDetect().appear_btn(B_SYNTHESIS_BTN_DISABLED):
+                logger.info("Servant selected.")
+            else:
+                logger.warning('Unable to select servant for synthesis')
+                return
+
+            self.common.click(P_SYNTHESIS_ENTER, 1) \
+                .wait(B_SELECT_FINISH.img, A_BR_BUTTONS)
+
+            if not self.jc.synthesis_servant_food_checked:
+                self._handle_synthesis_servant_food_option()
+                self.jc.synthesis_servant_food_checked = True
+
+            while True:
+                if not self._select_food_and_synthesis():
+                    return
+                if TksDetect().appear(IMG.TKS_SERVANT_LEVEL_MAX, A_SERVANT_LEVEL_MAX_NOTICE):
+                    logger.warning('Exp full for this servant')
+                    offset_x = 193
+                    break
+                self.common.click(P_SYNTHESIS_ENTER) \
+                    .wait(B_SELECT_FINISH.img, A_BR_BUTTONS)
 
     def synthesis_reisou(self):
-        pass
+        logger.info('Synthesis reisou Start.')
+        self.common.back_to_top()
+        self.common.go_menu(P_MAIN_SYNTHESIS)
+        self.common.click(P_SYNTHESIS_SYNTHESIS, 3)
+        self.common.wait_and_click_btn(B_SYNTHESIS_LOAD, 3)
+
+        if not self.jc.synthesis_reisou_checked:
+            self._handle_synthesis_reisou_option()
+            self.jc.synthesis_reisou_checked = True
+
+        pos = self._find_last_locked_reisou()
+        if not pos:
+            raise AbandonException('No reisou for synthesis.')
+        logger.info(f'Found reisou for synthesis {pos}.')
+        self.common.click(pos, offset=(60, 0), after_delay=1.5) \
+            .wait_btn(B_BACK) \
+            .click(P_SYNTHESIS_ENTER, 1) \
+            .wait_btn(B_SELECT_FINISH)
+
+        if not self.jc.synthesis_reisou_food_checked:
+            self._handle_synthesis_reisou_food_option()
+            self.jc.synthesis_reisou_food_checked = True
+
+        while True:
+            if not self._select_food_and_synthesis():
+                break
+            if TksDetect().appear_btn(B_SYNTHESIS_LOAD):
+                logger.warning('ExpBall Created')
+                break
+            self.common.click(P_SYNTHESIS_ENTER) \
+                .wait_btn(B_SELECT_FINISH)
 
     def _handle_summon_option(self):
-        # TODO not sure if the settings will be kept after switch account
-        pass
+        self.common.click(B_SUMMON_AUTO_SALE.center) \
+            .wait(IMG.TKS_DIALOG_DECIDE, A_DIALOG_BUTTONS)
+        t = TksDetect()
+        t.find_and_click(B_FILTER_STAR_1_OFF.img, A_SUMMON_OPTION_EXP, threshold=0.01)
+        t.find_and_click(B_FILTER_STAR_2_OFF.img, A_SUMMON_OPTION_EXP, threshold=0.01)
+        t.find_and_click(B_FILTER_STAR_3_ON.img, A_SUMMON_OPTION_EXP, threshold=0.01)
+        t.find_and_click(B_FILTER_STAR_1_ON.img, A_SUMMON_OPTION_FOU, threshold=0.01)
+        t.find_and_click(B_FILTER_STAR_2_ON.img, A_SUMMON_OPTION_FOU, threshold=0.01)
+        t.find_and_click(B_FILTER_STAR_3_ON.img, A_SUMMON_OPTION_FOU, threshold=0.01)
+        t.find_and_click(B_FILTER_STAR_1_ON.img, A_SUMMON_OPTION_REISOU, threshold=0.01)
+        t.find_and_click(B_FILTER_STAR_2_ON.img, A_SUMMON_OPTION_REISOU, threshold=0.01)
+        t.find_and_click(B_FILTER_STAR_3_ON.img, A_SUMMON_OPTION_REISOU, threshold=0.01)
+
+        t.find_and_click(IMG.TKS_DIALOG_DECIDE, A_DIALOG_BUTTONS)
+
+    def _handle_sort_option(self):
+        while not TksDetect().appear_btn(B_SORT_FILTER_ON):
+            self.common.click(B_SORT_FILTER_ON.center, 1)
+        while not TksDetect().appear_btn(B_SORT_FAV_ON):
+            self.common.click(B_SORT_FAV_ON.center, 1)
+        self.common.click(P_SORT_SUBMIT, 1)
+        while not TksDetect().appear_btn(B_SORT_DEC):
+            self.common.click(B_SORT_DEC.center, 1)
+
+    def _select_food_and_synthesis(self):
+        logger.info(f'Selected all food.')
+        self._select_all()
+        if TksDetect().appear(B_SELECT_FINISH.img, A_BR_BUTTONS):
+            logger.info(f'No food any more.')
+            return False
+        # trick here, although the pos of servant B_SELECT_FINISH is different, the center still can be clicked
+        self.common.click(B_SELECT_FINISH.center, 1) \
+            .click(B_SELECT_FINISH.center, .5) \
+            .click(B_SUMMON_SUBMIT.center, 2)
+        while not TksDetect().appear_btn(B_BACK):
+            self.common.click(P_SPACE, .4)
+        return True
+
+    def _handle_synthesis_reisou_option(self):
+        logger.info('Handle systhesis reisou option')
+        while not TksDetect().appear_btn(B_SELECT_GIRD):
+            self.common.click(B_SELECT_GIRD.center, 2)
+        self.common.click(P_FILTER_FILTER, 1) \
+            .click(P_FILTER_RESET, .7) \
+            .click(P_OPTIONS_SCROLL_START, .7) \
+            .click(B_FILTER_STAR_1_OFF.center, .7) \
+            .click(B_FILTER_SUBMIT.center, 1) \
+            .click(P_SORT_SORT, 1) \
+            .click(P_SORT_BYLEVEL, .7)
+        self._handle_sort_option()
+
+    def _handle_synthesis_reisou_food_option(self):
+        logger.info('Handle systhesis reisou food option')
+        while not TksDetect().appear_btn(B_SELECT_GIRD):
+            self.common.click(B_SELECT_GIRD.center, 2)
+        self.common.click(P_FILTER_FILTER, 1) \
+            .click(P_FILTER_RESET, .7) \
+            .click(P_OPTIONS_SCROLL_START, .7) \
+            .click(B_FILTER_STAR_1_OFF.center, .7) \
+            .click(B_FILTER_STAR_2_OFF.center, .7) \
+            .click(B_FILTER_SUBMIT.center, 1) \
+            .click(P_SORT_SORT, 1) \
+            .click(P_SORT_BYRANK, .7)
+        self._handle_sort_option()
+
+    def _handle_synthesis_servant_option(self):
+        logger.info('Handle systhesis servant option')
+        while not TksDetect().appear_btn(B_SELECT_GIRD):
+            self.common.click(B_SELECT_GIRD.center, 2)
+        self.common.click(P_FILTER_FILTER, 1) \
+            .click(P_FILTER_RESET, .7) \
+            .click(P_OPTIONS_SCROLL_END, .7) \
+            .click(P_NOT_MAX_LEVEL, .7) \
+            .click(B_FILTER_SUBMIT.center, 1) \
+            .click(P_SORT_SORT, 1) \
+            .click(P_SORT_BYLEVEL, .7)
+        self._handle_sort_option()
+
+    def _handle_synthesis_servant_food_option(self):
+        logger.info('Handle systhesis servant food option')
+        while not TksDetect().appear_btn(B_SELECT_GIRD):
+            self.common.click(B_SELECT_GIRD.center, 2)
+        self.common.click(P_FILTER_FILTER, 1) \
+            .click(P_FILTER_RESET, .7) \
+            .click(P_OPTIONS_SCROLL_END, .7) \
+            .click(P_SERVANT_OPTION_EXP, .7) \
+            .click(B_FILTER_SUBMIT.center, 1) \
+            .click(P_SORT_SORT, 1) \
+            .click(P_SORT_BYLEVEL, .7)
+        self._handle_sort_option()
+
+    def _handle_servant_burning_option(self):
+        logger.info('Handle servant burning option')
+        while not TksDetect().appear_btn(B_SELECT_GIRD):
+            self.common.click(B_SELECT_GIRD.center, 2)
+        self.common.click(P_FILTER_FILTER, 1) \
+            .click(P_FILTER_RESET, .7) \
+            .click(P_OPTIONS_SCROLL_END, .7) \
+            .click(P_SERVANT_OPTION_SERVANT, .7) \
+            .click(B_FILTER_SUBMIT.center, 1) \
+            .click(P_SORT_SORT, 1) \
+            .click(P_SORT_BYLEVEL, .7)
+        self._handle_sort_option()
+
+    def _handle_code_burning_option(self):
+        logger.info('Handle command code burning option')
+        while not TksDetect().appear_btn(B_SELECT_GIRD):
+            self.common.click(B_SELECT_GIRD.center, 3)
+        self.common.click(P_FILTER_FILTER, 1) \
+            .click(P_FILTER_RESET, .7) \
+            .click(P_OPTIONS_SCROLL_START, .7) \
+            .click(B_FILTER_STAR_1_OFF.center, .7) \
+            .click(B_FILTER_SUBMIT.center, 1)
+
+    def _handle_summon_special(self, name, pos):
+        self.common.click(pos, after_delay=1.5)
+        # self.common.click_and_wait(s[1], IMG.TKS_FAV, A_LEFT_BUTTONS, interval=2)
+        self.common.handle_special_drop(TksDetect(), self.context)
+        if self.jc.target_summon_special():
+            if name == self.jc.target_summon_special():
+                self.summon_special_count += 1
+        else:
+            self.summon_special_count += 1
+        if self.summon_special_count >= self.max_summon_special:
+            self.common.click(P_TL_BUTTON, after_delay=1.5)
+            return False
+        return True
+
+    def _find_last_locked_reisou(self):
+        prev = None
+        t = TksDetect()
+        for i, j in ((i, j) for i in range(4) for j in range(7)):
+            btn = B_SELECT_LOCK.offset(133 * j, 142 * i)
+            if not t.appear_btn(btn):
+                break
+            prev = btn.center
+        return prev
+
+    def _select_all(self):
+        for i, j in ((i, j) for i in range(4) for j in range(7)):
+            self.common.click((133 + 133 * j, 253 + 142 * i), after_delay=.15)
+        schedule.sleep(1)
+
+    def _burn_all(self):
+        while True:
+            self._select_all()
+            if TksDetect().appear_btn(B_SELECT_FINISH):
+                break
+            self.common.click(B_SELECT_FINISH.center, 1) \
+                .click(P_SORT_SUBMIT, 1) \
+                .wait_and_click_btn(B_SELL_RESULT, after_delay=1) \
+                .wait_btn(B_SELECT_FINISH)
 
     def _find_special(self, t, pos):
         rect = (84 + 187 * (pos % 6 + pos // 6), 187 + 225 * (pos // 6), 258 + 187 * (pos % 6 + pos // 6),
