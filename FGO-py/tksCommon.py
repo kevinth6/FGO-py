@@ -63,7 +63,7 @@ class TksCommon:
             elif p := self.find_dialog_close(t):
                 t.click(p)
             else:
-                self.common.click(P_TL_BUTTON, after_delay=.2)
+                self.click(P_TL_BUTTON, after_delay=.2)
                 fgoDevice.device.perform('\xBB', (200,))
             fgoSchedule.schedule.sleep(.5)
         self.click(P_SCROLL_TOP, after_delay=.5)
