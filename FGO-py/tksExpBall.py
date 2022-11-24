@@ -93,7 +93,7 @@ class TksExpBall:
             self.jc.servant_burning_checked = True
         self._burn_all()
 
-        logger.info('Burn command code.')
+        logger.info('Burn command codes.')
         self.common.click(P_SELECT_CODE)
         if not self.jc.code_burning_checked:
             self._handle_code_burning_option()

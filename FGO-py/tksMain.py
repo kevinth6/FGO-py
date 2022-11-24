@@ -142,13 +142,17 @@ class TksMain:
 
     def run_free(self, context, times):
         cjc = context.cur_job_context()
-        TksCommon().back_to_top()
+        self.common.back_to_top()
         TksInterface(context).go_free_instance(cjc.chapter(), cjc.section(), cjc.instance())
         return TksBattleGroup(context)()
 
     def run_campaign(self, context, times):
-        TksCommon().back_to_top()
+        self.common.back_to_top()
         return TksCampaign(context)(skip_main=times > 1)
+
+    def run_exp_ball(self, context, times):
+        self.common.back_to_top()
+        TksExpBall(context)()
 
     parser_tks = argparse.ArgumentParser(prog='tks', description='Tulkas Extensions for FGO-py')
     parser_tks_ = parser_tks.add_subparsers(title='tkssubcmd', required=True, dest='subcmd')
