@@ -1,8 +1,11 @@
 import os, time, cv2, numpy, tqdm
+from fgoLogging import getLogger
 from fgoDetect import XDetect, coroutine, IMG, CLASS
 from fgoSchedule import schedule
 from fgoFuse import fuse
 from fgoDevice import device
+
+logger = getLogger('TksDetect')
 
 # Extension of fgoDetect.
 # Add detection supported by the images in the interface, accounts, and instance folder
@@ -115,13 +118,13 @@ class TksDetect(XDetect):
             p = yield t
 
     def appear(self, img, rect=(0, 0, 1280, 720), threshold=.05):
-        return super()._compare(img, rect, threshold)
+        return self._compare(img, rect, threshold)
 
     def appear_btn(self, button):
         return self.appear(button.img, button.rect, button.threshold)
 
     def find(self, img, rect=(0, 0, 1280, 720), threshold=.05):
-        return super()._find(img, rect, threshold)
+        return self._find(img, rect, threshold)
 
     def find_multiple(self, img, rect=(0, 0, 1280, 720), threshold=.05):
         num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(

@@ -53,8 +53,8 @@ class TksMain:
             elif p := self.common.find_dialog_close(t):
                 t.click(p)
             else:
-                self.common.click(P_TL_BUTTON, after_delay=.3)
-                fgoDevice.device.perform('\xBB', (300,))
+                self.common.click(P_TL_BUTTON, after_delay=.2)
+                fgoDevice.device.perform('\xBB', (200,))
             schedule.sleep(.5)
 
     def do_find(self):

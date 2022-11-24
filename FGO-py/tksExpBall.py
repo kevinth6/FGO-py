@@ -100,6 +100,8 @@ class TksExpBall:
             self.jc.code_burning_checked = True
         self._burn_all()
 
+        logger.info('Burning end.')
+
     def synthesis_servant(self):
         logger.info('Synthesis servant Start.')
         self.common.back_to_top()
