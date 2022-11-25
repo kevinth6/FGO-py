@@ -6,6 +6,8 @@ from tksDetect import *
 from tksCommon import FlowException, TksCommon, AbandonException
 from fgoKernel import Battle, Turn, withLock, lock, time
 from tksContext import TksContext
+from fgoMetadata import servantData
+from fgoConst import KEYMAP
 
 logger = getLogger('TksBattle')
 
@@ -17,6 +19,7 @@ class TksBattle(Battle):
         self.common = TksCommon()
         self.context = context
         super().__init__(Turn)
+        self.turnProc.context = context
 
     def check_options(self):
         logger.info('check battle options')
@@ -44,11 +47,34 @@ class TksBattle(Battle):
         return super().__call__()
 
 
+class TksTurn(Turn):
+    def __init__(self):
+        super().__init__()
+        self.context = None  # has to be set after constructor
+
+    def __call__(self, turn):
+        super().__call__(turn)
+
+    def _setup_turn(self, turn):
+        self.stage, self.stageTurn = [t := TksDetect(.2).getStage(), 1 + self.stageTurn * (self.stage == t)]
+        if turn == 1:
+            TksDetect.cache.setupServantDead()
+            self.stageTotal = TksDetect.cache.getStageTotal()
+            self.servant = [(lambda x: (x,) + servantData.get(x, ()))(TksDetect.cache.getFieldServant(i)) for i in
+                            range(3)]
+        else:
+            for i in (i for i in range(3) if TksDetect.cache.isServantDead(i)):
+                self.servant[i] = (lambda x: (x,) + servantData.get(x, ()))(TksDetect.cache.getFieldServant(i))
+                self.countDown[0][i] = [0, 0, 0]
+        logger.info(f'Turn {turn} Stage {self.stage} StageTurn {self.stageTurn} {[i[0] for i in self.servant]}')
+        if self.stageTurn == 1: TksDetect.cache.setupEnemyGird()
+
+
 class TksBattleGroup:
-    def __init__(self, context, run_once=False, is_free=True):
+    def __init__(self, context, run_once=False):
         self.context = context
         self.run_once = run_once
-        self.is_free = is_free
+        self.defeated = 0
         self.common = TksCommon()
         self.jc = self.context.cur_job_context()
 
@@ -68,10 +94,8 @@ class TksBattleGroup:
     def choose_team(self):
         if (team_index := self.jc.team_index()) is not None:
             pass
-        elif self.jc.easy_mode():
-            team_index = 2
         else:
-            team_index = 1
+            team_index = 0
         logger.info('choose team ' + str(team_index))
         if TksDetect.cache.getTeamIndex() != team_index:
             fgoDevice.device.perform('\x70\x71\x72\x73\x74\x75\x76\x77\x78\x79'[team_index], (1000,))
@@ -87,7 +111,7 @@ class TksBattleGroup:
                 logger.info('add friend')
                 fgoDevice.device.perform('X', (300,))
             elif p := self.common.find_dialog_close(t):
-                t.click(p)
+                t.click(p, after_delay=.8)
             elif t.isMainInterface() or t.is_on_map() or t.is_on_menu():
                 break
             elif self.common.skip_possible_story():
@@ -132,13 +156,15 @@ class TksBattleGroup:
 
             fgoDevice.device.perform(' ', (600,))
             self.battle_completed()
+            self.defeated = 0
         else:
             logger.info('battle failed. result ' + str(result))
             self.jc.battle_failed += 1
+            self.defeated += 1
             fgoDevice.device.perform('CI', (1000, 1000,))
             self.common.click(P_FAIL_CLOSE, 1)
-            if self.jc.battle_failed > MAX_DEFEATED_TIMES:
-                raise AbandonException()
+            if self.defeated > MAX_DEFEATED_TIMES:
+                raise AbandonException('Defeated too many times')
 
         # handle battle continue
         if TksDetect().isBattleContinue():
@@ -150,13 +176,12 @@ class TksBattleGroup:
                 fgoDevice.device.perform('L', (1000,))
 
     def choose_friend(self):
-        if self.is_free:
-            if not self.jc.friend_reisou():
-                if not self.jc.campaign_friend_checked and (self.jc.campaign_servant() or self.jc.campaign_reisou()):
-                    self._handle_campaign_friend_options()
-                    self.jc.campaign_friend_checked = True
-            if self.jc.friend_class() and self.jc.friend_class() in PS_FRIEND_CLASSES:
-                self.common.click(PS_FRIEND_CLASSES[self.jc.friend_class()], after_delay=1)
+        if not self.jc.friend_reisou():
+            if not self.jc.campaign_friend_checked and (self.jc.campaign_servant() or self.jc.campaign_reisou()):
+                self._handle_campaign_friend_options()
+                self.jc.campaign_friend_checked = True
+        if self.jc.friend_class() and self.jc.friend_class() in PS_FRIEND_CLASSES:
+            self.common.click(PS_FRIEND_CLASSES[self.jc.friend_class()], after_delay=1)
 
         has_friend = True
         while True:
@@ -166,15 +191,30 @@ class TksBattleGroup:
                 fgoDevice.device.perform('\xBAK', (500, 1000))
                 has_friend = True
             else:
-                if self.jc.friend_reisou() and self.jc.friend_reisou() in FRIEND_REISOUS:
-                    if p := self.common.scroll_and_find(
-                            lambda t, i: t.find(FRIEND_REISOUS[self.jc.friend_reisou()], A_FRIEND_ICONS),
-                            end_pos=P_FRIEND_SCROLL_END, top_pos=P_FRIEND_SCROLL_TOP):
-                        return self.common.click(p)
-                    else:
-                        has_friend = False
+                if p := self.common.scroll_and_find(self._friend_find_func(), end_pos=P_FRIEND_SCROLL_END,
+                                                    top_pos=P_FRIEND_SCROLL_TOP):
+                    return self.common.click(p)
                 else:
-                    return fgoDevice.device.press('8')
+                    has_friend = False
+
+    def _friend_find_func(self):
+        fr = self.jc.friend_reisou() and self.jc.friend_reisou() in FRIEND_REISOUS
+        fs = self.jc.friend_servant() and self.jc.friend_servant() in FRIEND_SERVANTS
+        if fr and fs:
+            return self._find_by_reisou_and_name
+        elif fr:
+            return lambda t, i: t.find(FRIEND_REISOUS[self.jc.friend_reisou()], A_FRIEND_ICONS)
+        elif fs:
+            return lambda t, i: t.find(FRIEND_SERVANTS[self.jc.friend_servant()], A_FRIEND_NAMES)
+        else:
+            return lambda t, i: KEYMAP['8']
+
+    def _find_by_reisou_and_name(self, t, i):
+        ps = t.find_multiple(FRIEND_REISOUS[self.jc.friend_reisou()], A_FRIEND_ICONS)
+        for p in ps:
+            rect = t.surround((p[0] + 412, p[1] - 50), 450, 44)
+            if t.find(FRIEND_SERVANTS[self.jc.friend_servant()], rect):
+                return p
 
     def _handle_campaign_friend_options(self):
         logger.info('Handle campaign friend options')

@@ -140,17 +140,9 @@ class TksJobContext:
         """apple to eat in battle"""
         return safe_get(self.job_config, 'apples')
 
-    def skip_main(self):
-        """skip the task running in campaign"""
-        return safe_get(self.job_config, 'skip_main')
-
     def team_index(self):
         """specify the team index in any battle, the highest priority"""
         return safe_get(self.job_config, 'team_index')
-
-    def easy_mode(self):
-        """indicate if the battles in the job is easy, may affect the team to use"""
-        return safe_get(self.job_config, 'easy_mode')
 
     def chapter(self):
         """the chapter in free running"""
@@ -194,6 +186,10 @@ class TksJobContext:
         """specify the class in the friend selection, could be saber, lancer, etc."""
         return safe_get(self.job_config, 'friend_class')
 
+    def friend_servant(self):
+        """specify the servant in the friend selection, name of images in friend_servant."""
+        return safe_get(self.job_config, 'friend_servant')
+
     def max_summon(self):
         """max summon count in exp_ball"""
         return safe_get(self.job_config, 'max_summon')
@@ -214,3 +210,11 @@ class TksJobContext:
         """disable the servant and command code burning in exp_ball, this will cause the servant position quick filled up.
         should only be used when you need more low star servants to maximum Hogu"""
         return safe_get(self.job_config, 'disable_burning')
+
+    def reisou_food_max_star(self):
+        """max stars when selecting reisou food for reisou synthesis"""
+        return safe_get(self.job_config, 'reisou_food_max_star')
+
+    def code_burn_max_star(self):
+        """max stars when selecting command code to burn"""
+        return safe_get(self.job_config, 'code_burn_max_star')

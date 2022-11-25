@@ -232,9 +232,12 @@ class TksExpBall:
         self.common.click(P_FILTER_FILTER, 1) \
             .click(P_FILTER_RESET, .7) \
             .click(P_OPTIONS_SCROLL_START, .7) \
-            .click(B_FILTER_STAR_1_OFF.center, .7) \
-            .click(B_FILTER_STAR_2_OFF.center, .7) \
-            .click(B_FILTER_SUBMIT.center, 1) \
+            .click(B_FILTER_STAR_1_OFF.center, .7)
+        if (not self.jc.reisou_food_max_star()) or self.jc.reisou_food_max_star() >= 2:
+            self.common.click(B_FILTER_STAR_2_OFF.center, .7)
+        if (not self.jc.reisou_food_max_star()) or self.jc.reisou_food_max_star() >= 3:
+            self.common.click(B_FILTER_STAR_3_OFF.center, .7)
+        self.common.click(B_FILTER_SUBMIT.center, 1) \
             .click(P_SORT_SORT, 1) \
             .click(P_SORT_BYRANK, .7)
         self._handle_sort_option()
@@ -260,6 +263,7 @@ class TksExpBall:
             .click(P_FILTER_RESET, .7) \
             .click(P_OPTIONS_SCROLL_END, .7) \
             .click(P_SERVANT_OPTION_EXP, .7) \
+            .click(P_SERVANT_OPTION_FOU, .7) \
             .click(B_FILTER_SUBMIT.center, 1) \
             .click(P_SORT_SORT, 1) \
             .click(P_SORT_BYLEVEL, .7)
@@ -285,8 +289,10 @@ class TksExpBall:
         self.common.click(P_FILTER_FILTER, 1) \
             .click(P_FILTER_RESET, .7) \
             .click(P_OPTIONS_SCROLL_START, .7) \
-            .click(B_FILTER_STAR_1_OFF.center, .7) \
-            .click(B_FILTER_SUBMIT.center, 1)
+            .click(B_FILTER_STAR_1_OFF.center, .7)
+        if (not self.jc.code_burn_max_star()) or self.jc.code_burn_max_star() >= 2:
+            self.common.click(B_FILTER_STAR_2_OFF.center, .7)
+        self.common.click(B_FILTER_SUBMIT.center, 1)
 
     def _handle_summon_special(self, name, pos):
         self.common.click(pos, after_delay=1.5)

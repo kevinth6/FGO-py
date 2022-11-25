@@ -31,25 +31,10 @@ class TksCampaign:
         self.scanned_instances = []
         self.scanned_sections = []
 
-    def __call__(self, skip_main=False):
-        self.common.click(P_CUR_CAMPAIGN, after_delay=1)
-        cjc = self.context.cur_job_context()
-        if not skip_main:
-            skip_main = cjc.skip_main()
-        ret = True
-        if not skip_main:
-            schedule.sleep(3)
-            ret = self._run_main_tasks()
-        else:
-            logger.info('Main task skipped on required.')
-
-        if ret:
-            ret = self._run_free()
-        return ret
-
-    def _run_main_tasks(self):
+    def run_main_tasks(self):
+        logger.info('Campaign main tasks running start')
+        self.common.click(P_CUR_CAMPAIGN, after_delay=4)
         flag = 0b0000011
-        logger.info('Main tasks running start')
         while True:
             t = TksDetect(.3, .5).cache
             if flag & 0x4 and t.is_on_shop():
@@ -76,7 +61,7 @@ class TksCampaign:
                 flag = 0b10100111
             elif p := self.common.find_dialog_close(t):
                 logger.info('close dialog on ' + str(p))
-                t.click(p)
+                t.click(p, after_delay=.8)
             elif flag & 0x1 and t.is_on_map():
                 if p := t.find(IMG.TKS_REWARD_AVAILABLE, A_TOP_RIGHT, threshold=.02):
                     logger.info('Found available rewards. Go to reward view.')
@@ -109,11 +94,12 @@ class TksCampaign:
             else:
                 fgoDevice.device.perform('\xBB', (800,))
 
-        logger.info('Main tasks running exit.')
+        logger.info('Campaign main tasks running exit.')
         return True
 
-    def _run_free(self):
-        logger.info('Free instances running start.')
+    def run_free(self):
+        self.common.click(P_CUR_CAMPAIGN, after_delay=4)
+        logger.info('Campaign free instances running start.')
         self.scanned_instances.clear()
         self.scanned_sections.clear()
         self.first_free.clear()
@@ -152,7 +138,6 @@ class TksCampaign:
                 self.regular_free = self.regular_free + bak_instances
                 bak_instances.clear()
 
-        logger.info('Free instances running exit.')
         return ret
 
     def _back_and_forth_find_task(self, t):
@@ -217,7 +202,7 @@ class TksCampaign:
                 flag = 0b10100111
             elif p := self.common.find_dialog_close(t):
                 logger.info('close dialog on ' + str(p))
-                t.click(p)
+                t.click(p, after_delay=.8)
             elif flag & 0x1 and t.is_on_map():
                 logger.info('On map.')
                 return True

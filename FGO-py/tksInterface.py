@@ -74,7 +74,7 @@ class TksInterface:
             elif t.find_and_click(IMG.TKS_INTERRUPTED_BATTLE_ENTER, A_DIALOG_BUTTONS, after_delay=.7):
                 logger.info('Continue interrupted battle')
             elif p := self.common.find_dialog_close(t):
-                t.click(p)
+                t.click(p, after_delay=.8)
             else:
                 i += 1
 

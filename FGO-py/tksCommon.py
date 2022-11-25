@@ -61,7 +61,7 @@ class TksCommon:
                     or t.find_and_click(IMG.TKS_BACK_MGMT, A_TL_BUTTONS):
                 pass
             elif p := self.find_dialog_close(t):
-                t.click(p)
+                t.click(p, after_delay=.8)
             else:
                 self.click(P_TL_BUTTON, after_delay=.2)
                 fgoDevice.device.perform('\xBB', (200,))

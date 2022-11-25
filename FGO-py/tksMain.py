@@ -8,7 +8,7 @@ from fgoDetect import Detect, IMG
 from tksCommon import TksCommon, FlowException, AbandonException
 from tksInterface import TksInterface
 from tksContext import TksContext, TksJobContext
-from tksBattle import TksBattleGroup
+from tksBattle import TksBattleGroup, TksTurn
 from fgoFuse import StuckException
 from tksCampaign import TksCampaign
 from tksExpBall import TksExpBall
@@ -45,13 +45,13 @@ class TksMain:
                 logger.info('Click not continue')
             elif t.find_and_click(IMG.TKS_INTERRUPTED_BATTLE_ENTER, A_DIALOG_BUTTONS):
                 logger.info('Continue interrupted battle')
-            elif t.isMainInterface():
+            elif t.isMainInterface() or t.is_on_top() or t.is_on_map() or t.is_on_menu():
                 self.common.close_all_dialogs()
                 break
+            elif p := self.common.find_dialog_close(t):
+                t.click(p, after_delay=1)
             elif self.common.skip_possible_story():
                 pass
-            elif p := self.common.find_dialog_close(t):
-                t.click(p)
             else:
                 self.common.click(P_TL_BUTTON, after_delay=.2)
                 fgoDevice.device.perform('\xBB', (200,))
@@ -71,18 +71,23 @@ class TksMain:
         # TksBattleGroup(context)()
         # TksCommon(self.config).scroll_and_click(IMG.TKS_FREE_DONE, A_INSTANCE_MENUS)
 
-        self._cleanup()
+        assert fgoDevice.device.available
         context = TksContext(self.config, 'extertena')
-        context.current_job = 'exp_ball_test'
-        TksCommon().back_to_top()
-        TksExpBall(context).burning()
+        context.current_job = 'campaign_free'
+        TksBattleGroup(context).choose_friend()
+        # self._cleanup()
+        # TksCommon().back_to_top()
+        # TksExpBall(context).burning()
+        # turn = TksTurn()
+        # turn._setup_turn(1)
+        # turn.castServantSkill(0, 1, 3)
+        # fgoDevice.device.perform(' ', (2100,))
+        # fgoDevice.device.perform('612345', (300, 300, 2300, 1300, 6000))
         # TksExpBall(context).synthesis_servant()
         # context.save()
         # TksCommon().back_to_top()
         # TksCampaign(context)()
         # TksInterface(context).retrieve_week_awards()
-
-        assert fgoDevice.device.available
 
         # TksBattleGroup(context).choose_friend()
         # TksCommon().handle_special_drop(TksDetect())
@@ -121,7 +126,7 @@ class TksMain:
                 while times < 3:
                     try:
                         logger.info("Run job " + job_name)
-                        getattr(self, f'run_{context.job_configs[job_name]["type"]}')(context, times)
+                        getattr(self, f'run_{context.job_configs[job_name]["type"]}')(context)
                         logger.info("Finish running job " + job_name)
                         break
                     except (StuckException, FlowException) as ex:
@@ -140,15 +145,19 @@ class TksMain:
             context.save()
             logger.info("Finish running account " + account)
 
-    def run_free(self, context, times):
+    def run_free(self, context):
         cjc = context.cur_job_context()
         self.common.back_to_top()
         TksInterface(context).go_free_instance(cjc.chapter(), cjc.section(), cjc.instance())
         return TksBattleGroup(context)()
 
-    def run_campaign(self, context, times):
+    def run_campaign_main(self, context):
         self.common.back_to_top()
-        return TksCampaign(context)(skip_main=times > 1)
+        return TksCampaign(context).run_main_tasks()
+
+    def run_campaign_free(self, context):
+        self.common.back_to_top()
+        return TksCampaign(context).run_free()
 
     def run_exp_ball(self, context, times):
         self.common.back_to_top()

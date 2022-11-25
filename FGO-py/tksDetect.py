@@ -54,6 +54,12 @@ FRIEND_REISOUS = {
     ) for i in os.listdir('fgoImage/friend_reisou') if i.endswith('.png')
 }
 
+FRIEND_SERVANTS = {
+    i[:-4]: (lambda x: (x[..., :3], x[..., 3]))(
+        cv2.imread(f'fgoImage/friend_servant/{i}', cv2.IMREAD_UNCHANGED)
+    ) for i in os.listdir('fgoImage/friend_servant') if i.endswith('.png')
+}
+
 SUMMON_SPECIAL = [
     (i[:-4], (lambda x: (x[..., :3], x[..., 3]))(
         cv2.imread(f'fgoImage/summon_special/{i}', cv2.IMREAD_UNCHANGED)
@@ -308,6 +314,7 @@ A_FRIEND_SHOW_BUTTONS = (824, 40, 964, 586)
 A_SWIPE_FRIEND_OPTION_DOWN = (950, 500, 950, 100)
 A_FRIEND_CLASSES = (45, 89, 741, 166)
 A_FRIEND_ICONS = (28, 165, 235, 718)
+A_FRIEND_NAMES = (340, 166, 750, 694)
 A_SERVANT_LEVEL_MAX_NOTICE = (1000, 472, 1238, 535)
 A_SUMMON_OPTION_EXP = (319, 229, 984, 315)
 A_SUMMON_OPTION_FOU = (319, 309, 984, 400)
