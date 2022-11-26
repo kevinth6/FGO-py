@@ -164,7 +164,7 @@ class TksMain:
         self.common.back_to_top()
         return TksCampaign(context).run_free()
 
-    def run_exp_ball(self, context, times):
+    def run_exp_ball(self, context):
         self.common.back_to_top()
         TksExpBall(context)()
 

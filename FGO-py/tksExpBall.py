@@ -39,6 +39,7 @@ class TksExpBall:
             self.synthesis_reisou()
             self.synthesis_count += 1
             logger.info(f'Finished synthesis {self.synthesis_count}')
+            self.common.back_to_top()
         logger.info('ExpBall End.')
 
     def summon_fp(self):
