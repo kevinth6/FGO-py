@@ -26,6 +26,7 @@ class TksCampaign:
     def __init__(self, context):
         self.common = TksCommon()
         self.context = context
+        self.jc = context.cur_job_context()
         self.regular_free = []
         self.first_free = []
         self.scanned_instances = []
@@ -37,11 +38,14 @@ class TksCampaign:
         flag = 0b0000011
         while True:
             t = TksDetect(.3, .5).cache
-            if flag & 0x4 and t.is_on_shop():
-                self._handle_rewards()
+            if flag & 0x4 and t.is_on_campaign_shop():
+                if self.jc.handle_campaign_reward():
+                    self._handle_rewards()
+                else:
+                    t.click(P_TL_BUTTON, after_delay=.7)
                 flag = 0b00000011
             elif flag & 0x8 and t.appear(IMG.TKS_CHOOSE_FRIEND, A_TOP_RIGHT):
-                TksBattleGroup(self.context, run_once=True, is_free=False)()
+                TksBattleGroup(self.context, run_once=True)()
                 flag = 0b10100111
             elif flag & 0x10 and t.find_and_click(IMG.TKS_CAMPAIGN_BEGIN, A_DIALOG_BUTTONS):
                 logger.info('click task begin')
@@ -210,7 +214,7 @@ class TksCampaign:
                 logger.info('On menu, back')
                 self.common.click(P_TL_BUTTON)
                 flag = 0b00000011
-            elif t.is_on_shop():
+            elif t.is_on_campaign_shop():
                 logger.info('On shop, unexpected, back')
                 self.common.click(P_TL_BUTTON)
                 flag = 0b00000001
@@ -302,7 +306,7 @@ class TksCampaign:
                 t.click(p, after_delay=.7)
             elif t.is_on_map() or t.is_on_top():
                 break
-            elif not t.is_on_shop():
+            elif not t.is_on_campaign_shop():
                 logger.info('Not on shop, exit.')
                 t.click(P_TL_BUTTON, after_delay=.7)
             else:

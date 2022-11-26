@@ -68,6 +68,8 @@ class TksTurn(Turn):
                 self.countDown[0][i] = [0, 0, 0]
         logger.info(f'Turn {turn} Stage {self.stage} StageTurn {self.stageTurn} {[i[0] for i in self.servant]}')
         if self.stageTurn == 1: TksDetect.cache.setupEnemyGird()
+        # cast skill
+        self.enemy = [TksDetect.cache.getEnemyHp(i) for i in range(6)]
 
 
 class TksBattleGroup:

@@ -173,9 +173,9 @@ class TksDetect(XDetect):
     def is_on_menu(self):
         return self.appear_btn(B_MAIN_TL_CLOSE)
 
-    def is_on_shop(self):
-        return self.appear(IMG.TKS_CAMPAIGN_SHOP_OFF, A_CAMPAIGN_REWARD_TABS) \
-               or self.appear(IMG.TKS_CAMPAIGN_SHOP_ON, A_CAMPAIGN_REWARD_TABS)
+    def is_on_campaign_shop(self):
+        return self.appear(IMG.TKS_CAMPAIGN_SHOP_OFF, A_CAMPAIGN_REWARD_TABS, threshold=.02) \
+               or self.appear(IMG.TKS_CAMPAIGN_SHOP_ON, A_CAMPAIGN_REWARD_TABS, threshold=.02)
 
     def is_list_end(self, pos):
         return self.appear(IMG.LISTBAR, (pos[0] - 19, 0, pos[0] + 19, 720)) and super()._isListEnd(pos)
@@ -286,6 +286,7 @@ P_NOT_MAX_LEVEL = (323, 295)
 A_SUB_MENUS = (678, 108, 1278, 566)
 A_TL_BUTTONS = (8, 8, 240, 120)
 A_BR_BUTTONS = (980, 566, 1278, 718)
+A_TR_BUTTONS = (1008, 2, 1278, 124)
 A_INSTANCE_MENUS = (614, 90, 1240, 600)
 A_INSTANCE_MENUS_RIGHT = (1020, 90, 1240, 600)
 A_DIALOG_BUTTONS = (156, 420, 1080, 680)

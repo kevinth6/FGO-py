@@ -45,7 +45,7 @@ class TksMain:
                 logger.info('Click not continue')
             elif t.find_and_click(IMG.TKS_INTERRUPTED_BATTLE_ENTER, A_DIALOG_BUTTONS):
                 logger.info('Continue interrupted battle')
-            elif t.isMainInterface() or t.is_on_top() or t.is_on_map() or t.is_on_menu():
+            elif t.isMainInterface() or t.is_on_top() or t.is_on_map():
                 self.common.close_all_dialogs()
                 break
             elif p := self.common.find_dialog_close(t):
@@ -74,15 +74,20 @@ class TksMain:
         assert fgoDevice.device.available
         context = TksContext(self.config, 'extertena')
         context.current_job = 'campaign_free'
-        TksBattleGroup(context).choose_friend()
+        # TksBattleGroup(context).choose_friend()
         # self._cleanup()
         # TksCommon().back_to_top()
         # TksExpBall(context).burning()
         # turn = TksTurn()
         # turn._setup_turn(1)
         # turn.castServantSkill(0, 1, 3)
+        # fgoDevice.device.perform('Q' + 'WER'[2], (300, 300))
+        # fgoDevice.device.perform(('TYUIOP'[2], 'TYUIOP'[4], 'Z'), (300, 300, 2600))
+        # turn._setup_turn(2)
+        # turn.castMasterSkill(0, 7)
         # fgoDevice.device.perform(' ', (2100,))
         # fgoDevice.device.perform('612345', (300, 300, 2300, 1300, 6000))
+
         # TksExpBall(context).synthesis_servant()
         # context.save()
         # TksCommon().back_to_top()

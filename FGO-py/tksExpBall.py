@@ -137,6 +137,8 @@ class TksExpBall:
                     logger.warning('Exp full for this servant')
                     offset_x = 193
                     break
+                elif TksDetect.cache.find_and_click(IMG.TKS_CROSS, A_TR_BUTTONS):
+                    pass
                 self.common.click(P_SYNTHESIS_ENTER) \
                     .wait(B_SELECT_FINISH.img, A_BR_BUTTONS)
 
