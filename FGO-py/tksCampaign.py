@@ -5,8 +5,9 @@ import fgoSchedule
 from fgoDetect import IMG
 from fgoLogging import getLogger
 from tksDetect import *
-from tksCommon import TksCommon, clamp_rect
+from tksCommon import TksCommon, clamp_rect, FlowException
 from tksBattle import TksBattleGroup
+from tksExpBall import TksExpBall
 
 logger = getLogger('TksCampaign')
 
@@ -39,10 +40,7 @@ class TksCampaign:
         while True:
             t = TksDetect(.3, .5).cache
             if flag & 0x4 and t.is_on_campaign_shop():
-                if self.jc.handle_campaign_reward():
-                    self._handle_rewards()
-                else:
-                    t.click(P_TL_BUTTON, after_delay=.7)
+                self._handle_campaign_shop()
                 flag = 0b00000011
             elif flag & 0x8 and t.appear(IMG.TKS_CHOOSE_FRIEND, A_TOP_RIGHT):
                 TksBattleGroup(self.context, run_once=True)()
@@ -63,11 +61,15 @@ class TksCampaign:
             elif flag & 0x20 and self.common.handle_special_drop(t, self.context):
                 logger.info('Special dropped.')
                 flag = 0b10100111
+            elif t.appear_btn(B_SUMMON_SALE):
+                # synthesis only handled in cleanup
+                raise FlowException('Card position full. Need synthesis. ')
             elif p := self.common.find_dialog_close(t):
                 logger.info('close dialog on ' + str(p))
                 t.click(p, after_delay=.8)
             elif flag & 0x1 and t.is_on_map():
-                if p := t.find(IMG.TKS_REWARD_AVAILABLE, A_TOP_RIGHT, threshold=.02):
+                if self.jc.handle_campaign_reward() and \
+                        (p := t.find(IMG.TKS_REWARD_AVAILABLE, A_TOP_RIGHT, threshold=.02)):
                     logger.info('Found available rewards. Go to reward view.')
                     t.click(p)
                     flag = 0b00000101
@@ -204,6 +206,9 @@ class TksCampaign:
             elif flag & 0x20 and self.common.handle_special_drop(t, self.context):
                 logger.info('Special dropped.')
                 flag = 0b10100111
+            elif t.appear_btn(B_SUMMON_SALE):
+                # synthesis only handled in cleanup
+                raise FlowException('Card position full. Need synthesis. ')
             elif p := self.common.find_dialog_close(t):
                 logger.info('close dialog on ' + str(p))
                 t.click(p, after_delay=.8)
@@ -281,7 +286,13 @@ class TksCampaign:
         logger.info('No available menu tasks')
         return False
 
-    def _handle_rewards(self):
+    def _handle_campaign_shop(self):
+        # TODO for other kind of campaign, refactor here
+        if not self.jc.handle_campaign_reward():
+            logger.info('In campaign shop, nothing to do, exit.')
+            self.common.click(P_TL_BUTTON, after_delay=.7)
+            return
+
         logger.info('Handle campaign rewards')
         while True:
             t = TksDetect(.2, .5).cache

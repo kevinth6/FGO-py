@@ -34,14 +34,14 @@ class TksCommon:
     def wait_btn(self, button, interval=.5):
         return self.wait(button.img, button.rect, button.threshold, interval)
 
-    def wait_and_click(self, img, rect=(0, 0, 1280, 720), threshold=.05, interval=.5, after_delay=.5):
+    def wait_and_click(self, img, rect=(0, 0, 1280, 720), threshold=.05, after_delay=.5, interval=.5):
         while not (p := TksDetect().find(img, rect, threshold)):
             schedule.sleep(interval)
 
         TksDetect.cache.click(p, after_delay)
         return self
 
-    def wait_and_click_btn(self, button, interval=.5, after_delay=.5):
+    def wait_and_click_btn(self, button, after_delay=.5, interval=.5):
         return self.wait_and_click(button.img, button.rect, button.threshold, interval, after_delay)
 
     def wait_for_main_interface(self, interval=.5):
@@ -111,6 +111,12 @@ class TksCommon:
                 or detect.find(IMG.TKS_DIALOG_CLOSE2, A_DIALOG_BUTTONS) \
                 or detect.find(IMG.APEMPTY, A_DIALOG_BUTTONS):
             logger.info("Dialog found with close button")
+            return p
+        elif p := detect.find(IMG.TKS_CANCEL, A_DIALOG_BUTTONS):
+            logger.info("Dialog found with cancel button")
+            return p
+        elif p := detect.find(IMG.TKS_EXIT, A_DIALOG_BUTTONS):
+            logger.info("Dialog found with exit button")
             return p
         elif p := detect.find(IMG.TKS_CROSS, A_FULL_DIALOG_CROSS):
             logger.info("Dialog found with cross button")

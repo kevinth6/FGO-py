@@ -45,6 +45,9 @@ class TksMain:
                 logger.info('Click not continue')
             elif t.find_and_click(IMG.TKS_INTERRUPTED_BATTLE_ENTER, A_DIALOG_BUTTONS):
                 logger.info('Continue interrupted battle')
+            elif t.appear_btn(B_SUMMON_SALE):
+                logger.info('Card position full. Start synthesis. ')
+                self.run_synthesis(TksContext.anonymous_context())
             elif t.isMainInterface() or t.is_on_top() or t.is_on_map():
                 self.common.close_all_dialogs()
                 break
@@ -72,12 +75,11 @@ class TksMain:
         # TksCommon(self.config).scroll_and_click(IMG.TKS_FREE_DONE, A_INSTANCE_MENUS)
 
         assert fgoDevice.device.available
-        context = TksContext(self.config, 'extertena')
-        context.current_job = 'campaign_free'
+        context = TksContext(self.config, 'militaoccasi')
+        context.current_job = 'campaign_main'
         # TksBattleGroup(context).choose_friend()
         # self._cleanup()
         # TksCommon().back_to_top()
-        # TksExpBall(context).burning()
         # turn = TksTurn()
         # turn._setup_turn(1)
         # turn.castServantSkill(0, 1, 3)
@@ -167,6 +169,16 @@ class TksMain:
     def run_exp_ball(self, context):
         self.common.back_to_top()
         TksExpBall(context)()
+
+    def run_synthesis(self, context):
+        exp_ball = TksExpBall(context)
+        if not context.cur_job_context().disable_burning():
+            exp_ball.burning()
+        exp_ball.synthesis_servant()
+        exp_ball.synthesis_reisou()
+
+    def run_skip(self, context):
+        logger.info('skip this job')
 
     parser_tks = argparse.ArgumentParser(prog='tks', description='Tulkas Extensions for FGO-py')
     parser_tks_ = parser_tks.add_subparsers(title='tkssubcmd', required=True, dest='subcmd')

@@ -6,6 +6,7 @@ from tksDetect import *
 from tksCommon import FlowException, TksCommon, AbandonException
 from fgoKernel import Battle, Turn, withLock, lock, time
 from tksContext import TksContext
+from tksExpBall import TksExpBall
 from fgoMetadata import servantData
 from fgoConst import KEYMAP
 
@@ -142,6 +143,9 @@ class TksBattleGroup:
             elif t.appear(IMG.TKS_TEAM_CONFIRM, A_TOP_RIGHT):
                 self.choose_team()
                 fgoDevice.device.perform(' ', (5000,))
+            elif t.appear_btn(B_SUMMON_SALE):
+                # synthesis only handled in cleanup
+                raise FlowException('Card position full. Need synthesis. ')
             else:
                 self.common.skip_possible_story()
             fgoDevice.device.press('\xBB')
@@ -179,9 +183,10 @@ class TksBattleGroup:
 
     def choose_friend(self):
         if not self.jc.friend_reisou():
-            if not self.jc.campaign_friend_checked and (self.jc.campaign_servant() or self.jc.campaign_reisou()):
+            if not self.context.campaign_friend_checked and \
+                    (self.jc.campaign_servant() or self.jc.campaign_reisou()):
                 self._handle_campaign_friend_options()
-                self.jc.campaign_friend_checked = True
+                self.context.campaign_friend_checked = True
         if self.jc.friend_class() and self.jc.friend_class() in PS_FRIEND_CLASSES:
             self.common.click(PS_FRIEND_CLASSES[self.jc.friend_class()], after_delay=1)
 
