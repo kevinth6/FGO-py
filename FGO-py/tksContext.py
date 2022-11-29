@@ -11,6 +11,7 @@ class TksContext:
         self.config = config
         self.account = account
         self.start_time = time.time()
+        self._setup_presets(config, account)
         self._setup_jobs_config(config, account)
         self._setup_job_contexts()
         self.current_job = None
@@ -24,6 +25,21 @@ class TksContext:
         self.servant_burning_checked = False
         self.reisou_burning_checked = False
         self.code_burning_checked = False
+
+    def _setup_presets(self, config, account):
+        self.presets = {}
+        if 'presets' in config:
+            for preset_key in config['presets']:
+                self.presets[preset_key] = copy.deepcopy(config['presets'][preset_key])
+
+        account_presets = (config['account_presets'][account]) if \
+            ('account_presets' in config) \
+            and config['account_presets'] \
+            and (account in config['account_presets']) else None
+
+        if account_presets:
+            for preset_key in account_presets:
+                self.job_configs[preset_key].update(account_presets[preset_key])
 
     def _setup_jobs_config(self, config, account):
         self.job_configs = {}
@@ -39,7 +55,16 @@ class TksContext:
             and (account in config['account_jobs']) else None
         if account_jobs:
             for job in account_jobs:
-                self.job_configs[job['name']].update(copy.deepcopy(job))
+                if job['name'] in self.job_configs:
+                    self.job_configs[job['name']].update(copy.deepcopy(job))
+                else:
+                    self.job_configs[job['name']] = copy.deepcopy(job)
+
+        # setup preset
+        for job_name in self.job_configs:
+            job = self.job_configs[job_name]
+            if 'use_preset' in job and job['use_preset'] and job['use_preset'] in self.presets:
+                job.update(self.presets[job['use_preset']])
 
     def _setup_job_contexts(self):
         self.job_contexts = {}
@@ -141,6 +166,10 @@ class TksJobContext:
         """apple to eat in battle"""
         return safe_get(self.job_config, 'apples')
 
+    def apple_kind(self):
+        """kind of the apple, gold by default"""
+        return safe_get(self.job_config, 'apple_kind')
+
     def handle_campaign_reward(self):
         """specify if this campaign need to handle reward"""
         return safe_get(self.job_config, 'handle_campaign_reward')
@@ -223,3 +252,11 @@ class TksJobContext:
     def code_burn_max_star(self):
         """max stars when selecting command code to burn"""
         return safe_get(self.job_config, 'code_burn_max_star')
+
+    def use_preset(self):
+        """using any of the preset config in the presets section"""
+        return safe_get(self.job_config, 'use_preset')
+
+    def turns(self, opp_class=None):
+        """turns config"""
+        return safe_get(self.job_config, 'turns')

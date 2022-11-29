@@ -79,10 +79,10 @@ class TksExpBall:
         if TksDetect().appear_btn(B_SUMMON_SALE):
             self.common.click(B_SUMMON_SALE.center, 3)
         else:
-            self.common.back_to_top()
-            self.common.go_menu(P_MENU_SHOP)
-            self.common.click(P_MENU_BURNING, 3)
-        self.common.wait_btn(B_SELECT_FINISH)
+            self.common.back_to_top() \
+                .go_menu(P_MENU_SHOP) \
+                .scroll_and_click(IMG.TKS_MENU_BURNING, A_SUB_MENUS) \
+                .wait_btn(B_SELECT_FINISH)
 
         logger.info('Burn servants.')
         self.common.click(P_SELECT_SERVANT)
@@ -101,19 +101,24 @@ class TksExpBall:
 
         logger.info('Burn command codes.')
         self.common.click(P_SELECT_CODE)
+        burn = True
         if not self.context.code_burning_checked:
-            self._handle_code_burning_option()
-            self.context.code_burning_checked = True
-        self._burn_all()
+            if self._handle_code_burning_option():
+                self.context.code_burning_checked = True
+            else:
+                burn = False
+        if burn:
+            self._burn_all()
 
         logger.info('Burning end.')
 
     def synthesis_servant(self):
         logger.info('Synthesis servant Start.')
-        self.common.back_to_top()
-        self.common.go_menu(P_MAIN_SYNTHESIS)
-        self.common.click(P_SYNTHESIS_SERVANT, 3)
-        self.common.wait_btn(B_SYNTHESIS_LOAD)
+        self.common.back_to_top() \
+            .go_menu(P_MAIN_SYNTHESIS) \
+            .click(P_SCROLL_TOP, .7) \
+            .click(P_SYNTHESIS_SERVANT, 3) \
+            .wait_btn(B_SYNTHESIS_LOAD)
 
         offset_x = 60
         while True:
@@ -150,10 +155,11 @@ class TksExpBall:
 
     def synthesis_reisou(self):
         logger.info('Synthesis reisou Start.')
-        self.common.back_to_top()
-        self.common.go_menu(P_MAIN_SYNTHESIS)
-        self.common.click(P_SYNTHESIS_SYNTHESIS, after_delay=3)
-        self.common.wait_and_click_btn(B_SYNTHESIS_LOAD, after_delay=3)
+        self.common.back_to_top() \
+            .go_menu(P_MAIN_SYNTHESIS) \
+            .click(P_SCROLL_TOP, .7) \
+            .click(P_SYNTHESIS_SYNTHESIS, after_delay=3) \
+            .wait_and_click_btn(B_SYNTHESIS_LOAD, after_delay=3)
 
         if not self.context.synthesis_reisou_checked:
             self._handle_synthesis_reisou_option()
@@ -307,7 +313,12 @@ class TksExpBall:
             .click(B_FILTER_STAR_1_OFF.center, .7)
         if self.jc.code_burn_max_star() and self.jc.code_burn_max_star() >= 2:
             self.common.click(B_FILTER_STAR_2_OFF.center, .7)
-        self.common.click(B_FILTER_SUBMIT.center, 1)
+        if TksDetect().appear_btn(B_FILTER_NOT_EXIST):
+            self.common.click(P_FILTER_CANCEL, .7)
+            return False
+        else:
+            self.common.click(B_FILTER_SUBMIT.center, 1)
+            return True
 
     def _handle_summon_special(self, name, pos):
         self.common.click(pos, after_delay=1.5)
@@ -340,6 +351,7 @@ class TksExpBall:
 
     def _burn_all(self):
         while True:
+            logger.info('burn all')
             self._select_all()
             if TksDetect().appear_btn(B_SELECT_FINISH):
                 break

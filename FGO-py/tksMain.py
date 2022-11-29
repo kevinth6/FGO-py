@@ -8,7 +8,7 @@ from fgoDetect import Detect, IMG
 from tksCommon import TksCommon, FlowException, AbandonException
 from tksInterface import TksInterface
 from tksContext import TksContext, TksJobContext
-from tksBattle import TksBattleGroup, TksTurn
+from tksBattle import TksBattleGroup, TksBattle, TksTurn
 from fgoFuse import StuckException
 from tksCampaign import TksCampaign
 from tksExpBall import TksExpBall
@@ -29,35 +29,38 @@ class TksMain:
     def _cleanup(self):
         assert fgoDevice.device.available
         while True:
-            t = TksDetect().cache
-            if t.isTurnBegin():
-                logger.info('In battle, complete battle first')
-                TksBattleGroup(TksContext.anonymous_context(), run_once=True)()
-            elif p := t.find(IMG.TKS_APP_ICON):
-                logger.info('Game closed, reopen')
-                t.click(p)
-            elif t.appear(IMG.TKS_CONTRACT, A_CONTRACT_TITLE, threshold=.02):
-                logger.info('Click contract agree')
-                t.click(P_CONTRACT_AGREE)
-            elif t.find_and_click(IMG.TKS_LOGIN, A_LOGIN_BOX, threshold=.02):
-                logger.info('Click login')
-            elif t.find_and_click(IMG.TKS_NOT_CONTINUE, A_DIALOG_BUTTONS):
-                logger.info('Click not continue')
-            elif t.find_and_click(IMG.TKS_INTERRUPTED_BATTLE_ENTER, A_DIALOG_BUTTONS):
-                logger.info('Continue interrupted battle')
-            elif t.appear_btn(B_SUMMON_SALE):
-                logger.info('Card position full. Start synthesis. ')
-                self.run_synthesis(TksContext.anonymous_context())
-            elif t.isMainInterface() or t.is_on_top() or t.is_on_map():
-                self.common.close_all_dialogs()
-                break
-            elif p := self.common.find_dialog_close(t):
-                t.click(p, after_delay=1)
-            elif self.common.skip_possible_story():
-                pass
-            else:
-                self.common.click(P_TL_BUTTON, after_delay=.2)
-                fgoDevice.device.perform('\xBB', (200,))
+            try:
+                t = TksDetect().cache
+                if t.isTurnBegin():
+                    logger.info('In battle, complete battle first')
+                    TksBattleGroup(TksContext.anonymous_context(), run_once=True)()
+                elif p := t.find(IMG.TKS_APP_ICON):
+                    logger.info('Game closed, reopen')
+                    t.click(p)
+                elif t.appear(IMG.TKS_CONTRACT, A_CONTRACT_TITLE, threshold=.02):
+                    logger.info('Click contract agree')
+                    t.click(P_CONTRACT_AGREE)
+                elif t.find_and_click(IMG.TKS_LOGIN, A_LOGIN_BOX, threshold=.02):
+                    logger.info('Click login')
+                elif t.find_and_click(IMG.TKS_NOT_CONTINUE, A_DIALOG_BUTTONS):
+                    logger.info('Click not continue')
+                elif t.find_and_click(IMG.TKS_INTERRUPTED_BATTLE_ENTER, A_DIALOG_BUTTONS):
+                    logger.info('Continue interrupted battle')
+                elif t.appear_btn(B_SUMMON_SALE):
+                    logger.info('Card position full. Start synthesis. ')
+                    self.run_synthesis(TksContext.anonymous_context())
+                elif t.isMainInterface() or t.is_on_top() or t.is_on_map():
+                    self.common.close_all_dialogs()
+                    break
+                elif p := self.common.find_dialog_close(t):
+                    t.click(p, after_delay=1)
+                elif self.common.skip_possible_story():
+                    pass
+                else:
+                    self.common.click(P_TL_BUTTON, after_delay=.2)
+                    fgoDevice.device.perform('\xBB', (200,))
+            except Exception as ex:
+                logger.error(ex, exc_info=True, stack_info=True)
             schedule.sleep(.5)
 
     def do_find(self):
@@ -75,14 +78,20 @@ class TksMain:
         # TksCommon(self.config).scroll_and_click(IMG.TKS_FREE_DONE, A_INSTANCE_MENUS)
 
         assert fgoDevice.device.available
-        context = TksContext(self.config, 'militaoccasi')
-        context.current_job = 'campaign_main'
+        context = TksContext(self.config, 'sufftechni')
+        context.current_job = 'campaign_free'
+        # self.run_synthesis(context)
+        # print(context.current_job[20])
+        battle = TksBattle(context)
+        battle()
+        # turn._setup_turn(1)
+
         # TksBattleGroup(context).choose_friend()
         # self._cleanup()
         # TksCommon().back_to_top()
         # turn = TksTurn()
         # turn._setup_turn(1)
-        # turn.castServantSkill(0, 1, 3)
+        # turn.castServantSkill(1, 1, 1)
         # fgoDevice.device.perform('Q' + 'WER'[2], (300, 300))
         # fgoDevice.device.perform(('TYUIOP'[2], 'TYUIOP'[4], 'Z'), (300, 300, 2600))
         # turn._setup_turn(2)

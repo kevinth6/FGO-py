@@ -91,7 +91,9 @@ class TksCommon:
                         scroll_area=A_SWIPE_RIGHT_DOWN):
         self.click(top_pos, after_delay=.5)
         for i in range(max_swipe):
-            if (s := func(TksDetect(), i)) or TksDetect.cache.is_list_end(end_pos):
+            if (s := func(TksDetect(), i)) or TksDetect.cache.is_list_end(end_pos) or \
+                    not TksDetect.cache.appear(IMG.LISTBAR, clamp_rect(
+                        (top_pos[0] - 35, top_pos[1] - 35, end_pos[0] + 35, end_pos[1] + 35))):
                 break
             fgoDevice.device.swipe(scroll_area)
             schedule.sleep(0.3)

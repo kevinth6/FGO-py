@@ -16,11 +16,12 @@ MAX_DEFEATED_TIMES = 2
 
 
 class TksBattle(Battle):
-    def __init__(self, context):
+    def __init__(self, context, opp_class=None):
         self.common = TksCommon()
         self.context = context
-        super().__init__(Turn)
+        super().__init__(TksTurn)
         self.turnProc.context = context
+        self.turnProc.turns = context.cur_job_context().turns(opp_class)
 
     def check_options(self):
         logger.info('check battle options')
@@ -54,23 +55,67 @@ class TksTurn(Turn):
         self.context = None  # has to be set after constructor
 
     def __call__(self, turn):
-        super().__call__(turn)
+        if not self.turns or turn > len(self.turns) or turn > TksDetect(.2).getStage():
+            super().__call__(turn)
+        else:
+            try:
+                self._setup_turn(turn)
+                logger.info(
+                    f'TksTurn {turn} Stage {self.stage} StageTurn {self.stageTurn} {[i[0] for i in self.servant]}')
+                turn_conf = self.turns[turn - 1]
+                for skill in self._parse_skills(turn_conf):
+                    if skill.startswith('m'):
+                        skill = skill[1:]
+                        if len(skill) == 4:
+                            self.castMasterSkillWithSwap(int(skill[0]), int(skill[2]), int(skill[3]))
+                        else:
+                            self.castMasterSkill(int(skill[0]), (int(skill[1]) if len(skill) > 1 else 0))
+                    else:
+                        self.castServantSkill(int(skill[0]), int(skill[1]), (int(skill[2]) if len(skill) > 2 else 0))
+                self.enemy = [TksDetect.cache.getEnemyHp(i) for i in range(6)]
+                fgoDevice.device.perform(' ', (2100,))
+                cards = str(turn_conf['cards'])
+                logger.info(f'cards: {cards}')
+                fgoDevice.device.perform(cards, (300, 300, 2300, 1300, 6000))
+            except Exception as ex:
+                logger.error(ex, exc_info=True)
+                super().__call__(turn)
 
     def _setup_turn(self, turn):
-        self.stage, self.stageTurn = [t := TksDetect(.2).getStage(), 1 + self.stageTurn * (self.stage == t)]
+        if not TksDetect.cache:
+            TksDetect(.2)
+        self.stage, self.stageTurn = [t := TksDetect.cache.getStage(), 1 + self.stageTurn * (self.stage == t)]
         if turn == 1:
             TksDetect.cache.setupServantDead()
             self.stageTotal = TksDetect.cache.getStageTotal()
             self.servant = [(lambda x: (x,) + servantData.get(x, ()))(TksDetect.cache.getFieldServant(i)) for i in
                             range(3)]
         else:
-            for i in (i for i in range(3) if TksDetect.cache.isServantDead(i)):
-                self.servant[i] = (lambda x: (x,) + servantData.get(x, ()))(TksDetect.cache.getFieldServant(i))
-                self.countDown[0][i] = [0, 0, 0]
-        logger.info(f'Turn {turn} Stage {self.stage} StageTurn {self.stageTurn} {[i[0] for i in self.servant]}')
-        if self.stageTurn == 1: TksDetect.cache.setupEnemyGird()
-        # cast skill
-        self.enemy = [TksDetect.cache.getEnemyHp(i) for i in range(6)]
+            self._setup_servant_dead()
+        if self.stageTurn == 1:
+            TksDetect.cache.setupEnemyGird()
+
+    def _setup_servant_dead(self):
+        for i in (i for i in range(3) if TksDetect.cache.isServantDead(i)):
+            self.servant[i] = (lambda x: (x,) + servantData.get(x, ()))(TksDetect.cache.getFieldServant(i))
+            self.countDown[0][i] = [0, 0, 0]
+
+    def _parse_skills(self, conf):
+        ret = []
+        if 'skills' in conf:
+            for skill_str in str(conf['skills']).split(','):
+                skill_str = skill_str.strip()
+                ret.append(skill_str)
+        return ret
+
+    def castMasterSkillWithSwap(self, skill, servant1, servant2):
+        self.countDown[1][skill] = 15
+        fgoDevice.device.perform('Q' + 'WER'[skill], (300, 300))
+        fgoDevice.device.perform(('TYUIOP'[servant1 - 1], 'TYUIOP'[servant2 - 1], 'Z'), (500, 500, 2600))
+        while not TksDetect().isTurnBegin():
+            pass
+        TksDetect(.5)
+        self._setup_servant_dead()
 
 
 class TksBattleGroup:
@@ -195,6 +240,7 @@ class TksBattleGroup:
             t = TksDetect(.2, .3)
             if t.isNoFriend() or not has_friend:
                 self.common.wait(IMG.TKS_FRIEND_REFRESH, A_FRIEND_OPTIONS_BAR)
+                logger.info('Refresh friends.')
                 fgoDevice.device.perform('\xBAK', (500, 1000))
                 has_friend = True
             else:

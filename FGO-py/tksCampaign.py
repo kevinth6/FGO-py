@@ -38,7 +38,7 @@ class TksCampaign:
         self.common.click(P_CUR_CAMPAIGN, after_delay=4)
         flag = 0b0000011
         while True:
-            t = TksDetect(.3, .5).cache
+            t = TksDetect(.3, .5)
             if flag & 0x4 and t.is_on_campaign_shop():
                 self._handle_campaign_shop()
                 flag = 0b00000011
