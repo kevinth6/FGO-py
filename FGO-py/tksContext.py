@@ -257,6 +257,6 @@ class TksJobContext:
         """using any of the preset config in the presets section"""
         return safe_get(self.job_config, 'use_preset')
 
-    def turns(self, opp_class=None):
+    def turns(self):
         """turns config"""
         return safe_get(self.job_config, 'turns')

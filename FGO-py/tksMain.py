@@ -128,7 +128,7 @@ class TksMain:
                     itfc.retrieve_week_awards()
                     break
                 except Exception as ex:
-                    logger.error(ex, exc_info=True, stack_info=True)
+                    self._report_exception(ex)
                     logger.info('Cleanup and continue')
                     self._cleanup()
                     times += 1
@@ -146,12 +146,12 @@ class TksMain:
                         logger.info("Finish running job " + job_name)
                         break
                     except (StuckException, FlowException) as ex:
-                        logger.error(ex, exc_info=True, stack_info=True)
+                        self._report_exception(ex)
                         logger.info('Cleanup and continue')
                         self._cleanup()
                         times += 1
                     except AbandonException as ex:
-                        logger.error(ex, exc_info=True, stack_info=True)
+                        self._report_exception(ex)
                         logger.error('Abandon this job, continue next')
                         self._cleanup()
                         break
@@ -160,6 +160,11 @@ class TksMain:
 
             context.save()
             logger.info("Finish running account " + account)
+
+    def _report_exception(self, ex):
+        logger.error(ex, exc_info=True, stack_info=True)
+        if TksDetect.cache:
+            TksDetect.cache.save('fgoLog/Exception')
 
     def run_free(self, context):
         cjc = context.cur_job_context()

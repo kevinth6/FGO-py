@@ -17,9 +17,11 @@ fgoTemp/
 Fuse*.png
 Capture*.png
 SpecialDrop*.png
+Exception*.png
 Screenshot.png
 Log*.txt
 fgoConfig.json
 tksConfig.yaml
+tksDaemon.yaml
 **/accounts/*.png
 tksResult/

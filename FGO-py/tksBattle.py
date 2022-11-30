@@ -4,24 +4,24 @@ from fgoDetect import IMG
 from fgoLogging import getLogger
 from tksDetect import *
 from tksCommon import FlowException, TksCommon, AbandonException
-from fgoKernel import Battle, Turn, withLock, lock, time
+from fgoKernel import Battle, Turn
 from tksContext import TksContext
-from tksExpBall import TksExpBall
 from fgoMetadata import servantData
 from fgoConst import KEYMAP
 
 logger = getLogger('TksBattle')
 
 MAX_DEFEATED_TIMES = 2
+MAX_DIALOGS_BEFORE_BATTLE = 5
 
 
 class TksBattle(Battle):
-    def __init__(self, context, opp_class=None):
+    def __init__(self, context):
         self.common = TksCommon()
         self.context = context
         super().__init__(TksTurn)
         self.turnProc.context = context
-        self.turnProc.turns = context.cur_job_context().turns(opp_class)
+        self.turnProc.turns = context.cur_job_context().turns()
 
     def check_options(self):
         logger.info('check battle options')
@@ -53,6 +53,7 @@ class TksTurn(Turn):
     def __init__(self):
         super().__init__()
         self.context = None  # has to be set after constructor
+        self.turns = None  # has to be set after constructor
 
     def __call__(self, turn):
         if not self.turns or turn > len(self.turns) or turn > TksDetect(.2).getStage():
@@ -107,6 +108,23 @@ class TksTurn(Turn):
                 skill_str = skill_str.strip()
                 ret.append(skill_str)
         return ret
+
+    def castServantSkill(self, pos, skill, target):
+        fgoDevice.device.press(('ASD', 'FGH', 'JKL')[pos][skill])
+        if TksDetect(.7).isSkillNone():
+            logger.warning(f'Skill {pos} {skill} Disabled')
+            self.countDown[0][pos][skill] = 999
+            fgoDevice.device.press('\x08')
+        elif TksDetect.cache.isSkillCastFailed():
+            logger.warning(f'Skill {pos} {skill} Cast Failed')
+            self.countDown[0][pos][skill] = 1
+            fgoDevice.device.press('J')
+        elif t := TksDetect.cache.getSkillTargetCount():
+            fgoDevice.device.perform(['3333', '2244', '3234'][t - 1][target], (300,))
+        fgoDevice.device.press('\x08')
+        while not TksDetect().isTurnBegin():
+            pass
+        TksDetect(.5)
 
     def castMasterSkillWithSwap(self, skill, servant1, servant2):
         self.countDown[1][skill] = 15
@@ -168,6 +186,7 @@ class TksBattleGroup:
                 fgoDevice.device.perform(' ', (600,))
 
     def _before_battle(self):
+        dialogs = 0
         while True:
             t = TksDetect(.8, .8).cache
             if t.isTurnBegin():
@@ -181,6 +200,9 @@ class TksBattleGroup:
                 # could be friend constraint confirm
                 logger.info('Dialog pops up. click close')
                 t.click(p)
+                dialogs += 1
+                if dialogs > MAX_DIALOGS_BEFORE_BATTLE:
+                    raise AbandonException('Too many dialogs here, may meet some constraint rules.')
             elif t.appear(IMG.TKS_CHOOSE_FRIEND, A_TOP_RIGHT):
                 logger.info('choose friend. ')
                 self.choose_friend()
