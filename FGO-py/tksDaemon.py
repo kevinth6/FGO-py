@@ -61,11 +61,12 @@ def main():
             kill_proc(script_pid)
             time.sleep(5)
         elif game_pid and not script_pid:
-            log(f'Script running, kill game proc {game_pid}')
+            log(f'Script not running, kill game proc {game_pid}')
             kill_proc(game_pid)
             time.sleep(5)
 
-        if not last_run_time or time.time() - last_run_time > run_interval:
+        cur = time.time()
+        if not last_run_time or cur - last_run_time > run_interval:
             if script_pid:
                 log('Already running. skip launch.')
             else:
@@ -78,7 +79,7 @@ def main():
                 time_str = time.strftime(f"%Y-%m-%d_%H:%M:%S:{round(last_run_time * 1000) % 1000:03}")
                 log(f'Finished launch. run time: {time_str}')
         else:
-            log('Idle.')
+            log(f'Idle. Launch after {run_interval - (cur - last_run_time):<.2f} seconds')
 
         time.sleep(check_interval)
 

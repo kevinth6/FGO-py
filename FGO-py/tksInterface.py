@@ -2,8 +2,9 @@ import fgoDevice
 import fgoSchedule
 from fgoDetect import IMG
 from fgoLogging import getLogger
+from fgoConst import KEYMAP
 from tksDetect import *
-from tksCommon import TksCommon, FlowException
+from tksCommon import TksCommon, FlowException, AbandonException
 from tksBattle import TksBattleGroup
 from tksContext import TksContext
 
@@ -119,40 +120,156 @@ class TksInterface:
         for account in self.context.config["accounts"]:
             self.switch_to_account(account)
 
-    def _go_section_in_chapter(self, chapter, section):
+    def go_section_in_chapter(self, chapter, section):
         logger.info(f'Go to section {section}')
         # sometimes campaign map is slow to open
         if self.common.swipe_on_map_and_do(
                 lambda t, i: t.find_and_click(INSTANCES[chapter]['sections'][section], threshold=.1)):
             return self
         else:
-            raise FlowException('Unable to find the section')
+            raise FlowException(f'Unable to find the section {section}')
 
-    def _go_instance(self, chapter, instance):
-        if instance and (instance in INSTANCES[chapter]['instances']):
-            self.common.scroll_and_click(INSTANCES[chapter]['instances'][instance], A_INSTANCE_MENUS)
-        else:
-            self.common.scroll_and_click(IMG.TKS_FREE_DONE, A_INSTANCE_MENUS)
-        # TODO: could be dialogs here
-
-    def go_free_instance(self, chapter, section, instance):
-        logger.info(f'Go to free instance: chapter {chapter}, section {section}, instance {instance}')
+    def go_chapter(self, chapter):
         if not (chapter in INSTANCES):
-            raise FlowException('Unknown chapter ' + chapter)
+            raise AbandonException(f'Unknown chapter {chapter}')
 
         for i in range(1, 3):
             if str(i) in INSTANCES[chapter]['menus']:
                 logger.info(f'Go to chapter menu {i}')
                 self.common.wait_for_submenu()
+                schedule.sleep(.8)
                 self.common.scroll_and_click(INSTANCES[chapter]['menus'][str(i)], A_SUB_MENUS)
             else:
                 break
 
+    def go_free_instance(self, chapter, section, instance):
+        logger.info(f'Go to free instance: chapter {chapter}, section {section}, instance {instance}')
+        self.go_chapter(chapter)
+
         if section and (str(section) in INSTANCES[chapter]['sections']):
             while not TksDetect().is_on_map():
                 schedule.sleep(.5)
-            self._go_section_in_chapter(chapter, str(section))
+            self.go_section_in_chapter(chapter, str(section))
 
         while not TksDetect().is_on_menu():
             schedule.sleep(.5)
-        self._go_instance(chapter, instance)
+        if instance:
+            if instance in INSTANCES[chapter]['instances']:
+                self.common.scroll_and_click(INSTANCES[chapter]['instances'][instance], A_INSTANCE_MENUS, threshold=.01)
+            else:
+                raise AbandonException(f'Unable to find the instance {instance}')
+        else:
+            self.common.scroll_and_click(IMG.TKS_FREE_DONE, A_INSTANCE_MENUS)
+
+    def run_free(self):
+        cjc = self.context.cur_job_context()
+        while True:
+            self.go_free_instance(cjc.chapter(), cjc.section(), cjc.instance())
+            if TksBattleGroup(self.context)():
+                self.common.back_to_top()
+            else:
+                break
+
+    def run_interlude(self):
+        logger.info(f'Go interlude')
+        self.go_chapter('interlude')
+        schedule.sleep(1)
+
+        after = False
+        while True:
+            t = TksDetect(.3, .3)
+            if t.appear(IMG.TKS_CHOOSE_FRIEND, A_TOP_RIGHT):
+                TksBattleGroup(self.context, run_once=True)()
+                after = True
+            elif t.isApEmpty():
+                logger.info('AP empty.')
+                if not self.common.eat_apple(self.context):
+                    logger.info('Exit due to no AP.')
+                    break
+            elif self.common.handle_special_drop(t, self.context):
+                logger.info('Special dropped.')
+            elif p := t.find(IMG.TKS_DIALOG_INTERLUDE, A_DIALOG_BUTTONS):
+                logger.info("Go to another interlude")
+                self.common.click(p, .7)
+            elif t.find_and_click(IMG.TKS_DIALOG_BEGIN, A_DIALOG_BUTTONS):
+                logger.info('click begin')
+            elif p := self.common.find_dialog_close(t):
+                self.common.click(p, .7)
+            elif t.is_on_menu():
+                if after:
+                    while p := TksDetect().find(IMG.TKS_TL_INTERLUDE, A_TL_BUTTONS):
+                        logger.info("After battle, in interlude section, go out")
+                        self.common.click(p, 1)
+                    after = False
+                else:
+                    i = 0
+                    while i < 3:
+                        if t.appear(IMG.TKS_TL_INTERLUDE, A_TL_BUTTONS):
+                            logger.info("In interlude section, select first instance in menu")
+                            self.common.click(KEYMAP['8'], 3)
+                            if self._enter_interlude():
+                                break
+                        else:
+                            self.common.click(P_SCROLL_TOP, .7)
+                            logger.info("Select first instance in menu")
+                            self.common.click(KEYMAP['8'], 3)
+                            if self._enter_interlude() or TksDetect.cache.appear(IMG.TKS_TL_INTERLUDE, A_TL_BUTTONS):
+                                break
+                        i += 1
+                    if i >= 3:
+                        logger.info('No interlude to run. Exit')
+                        break
+            elif t.is_on_top():
+                logger.info("Unexpected on top. Re-enter")
+                self.go_chapter('interlude')
+                schedule.sleep(1)
+            elif self.common.skip_possible_story():
+                pass
+            else:
+                fgoDevice.device.perform('\xBB', (500,))
+
+    def _enter_interlude(self):
+        return TksDetect().appear(IMG.TKS_CHOOSE_FRIEND, A_TOP_RIGHT) \
+               or TksDetect.cache.appear(IMG.TKS_DIALOG_BEGIN, A_DIALOG_BUTTONS) \
+               or TksDetect.cache.isApEmpty()
+
+    def run_rank_up(self):
+        logger.info(f'Go rank up')
+        self.go_chapter('rank_up')
+        schedule.sleep(1)
+
+        while True:
+            t = TksDetect(.3, .3)
+            if t.appear(IMG.TKS_CHOOSE_FRIEND, A_TOP_RIGHT):
+                TksBattleGroup(self.context, run_once=True)()
+            elif t.isApEmpty():
+                logger.info('AP empty.')
+                if not self.common.eat_apple(self.context):
+                    logger.info('Exit due to no AP.')
+                    break
+            elif self.common.handle_special_drop(t, self.context):
+                logger.info('Special dropped.')
+            elif t.find_and_click(IMG.TKS_DIALOG_BEGIN, A_DIALOG_BUTTONS):
+                logger.info('click begin')
+            elif p := self.common.find_dialog_close(t):
+                self.common.click(p, .7)
+            elif t.is_on_menu():
+                self.common.click(P_SCROLL_TOP, .7)
+                logger.info("Select first instance in menu")
+                i = 0
+                while i < 3:
+                    self.common.click(KEYMAP['8'], 3)
+                    if TksDetect().appear(IMG.TKS_CHOOSE_FRIEND, A_TOP_RIGHT) \
+                            or TksDetect.cache.appear(IMG.TKS_DIALOG_BEGIN, A_DIALOG_BUTTONS) \
+                            or TksDetect.cache.isApEmpty():
+                        break
+                    i += 1
+                if i == 3:
+                    logger.info('No rank up to run. Exit')
+                    break
+            elif t.is_on_top():
+                logger.info("Unexpected on top. Re-enter")
+                self.go_chapter('rank_up')
+                schedule.sleep(1)
+            else:
+                fgoDevice.device.perform('\xBB', (500,))

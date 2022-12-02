@@ -1,3 +1,4 @@
+import time
 from fgoSchedule import ScriptStop
 from fgoLogging import getLogger
 logger=getLogger('Fuse')
@@ -5,6 +6,7 @@ logger=getLogger('Fuse')
 # Tulkas modified. Added fuse_time check to first throw a StuckException that can be recovered,
 # before ScriptStop
 StuckException = type('StuckException', (Exception,), {})
+TimeoutException = type('TimeoutException', (Exception,), {})
 MAX_FUSE_TIME = 3
 class Fuse:
     def __init__(self,fv=150,logsize=10):
@@ -14,6 +16,7 @@ class Fuse:
         self.log=[None]*logsize
         self.logptr=0
         self.fuse_time=0
+        self.timeout_time=None
     def increase(self):
         logger.debug(f'{self.value}')
         if self.value>self.max:
@@ -23,7 +26,10 @@ class Fuse:
                 raise ScriptStop('Fused')
             else:
                 self.value = 0
-                raise StuckException(self.fuse_time)
+                raise StuckException(f"Stuck {self.fuse_time}")
+        if self.timeout_time and time.time() > self.timeout_time:
+            self.save()
+            raise TimeoutException('Timeout')
         self.value+=1
     def reset(self,detect=None):
         self.value=0
@@ -32,5 +38,5 @@ class Fuse:
             self.log[self.logptr]=detect
             self.logptr=(self.logptr+1)%self.logsize
         return True
-    def save(self,path='fgoLog'):[self.log[(i+self.logptr)%self.logsize].save(f'{path}/Fuse_{i:02}') for i in range(self.logsize)if self.log[(i+self.logptr)%self.logsize]]
+    def save(self,path='fgoFuse'):[self.log[(i+self.logptr)%self.logsize].save(f'{path}/Fuse_{i:02}') for i in range(self.logsize)if self.log[(i+self.logptr)%self.logsize]]
 fuse=Fuse()

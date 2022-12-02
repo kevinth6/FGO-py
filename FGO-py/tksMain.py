@@ -9,7 +9,7 @@ from tksCommon import TksCommon, FlowException, AbandonException
 from tksInterface import TksInterface
 from tksContext import TksContext, TksJobContext
 from tksBattle import TksBattleGroup, TksBattle, TksTurn
-from fgoFuse import StuckException
+from fgoFuse import fuse, StuckException, TimeoutException
 from tksCampaign import TksCampaign
 from tksExpBall import TksExpBall
 
@@ -28,6 +28,7 @@ class TksMain:
 
     def _cleanup(self):
         assert fgoDevice.device.available
+        fuse.timeout_time = time.time() + 900
         while True:
             try:
                 t = TksDetect().cache
@@ -78,12 +79,12 @@ class TksMain:
         # TksCommon(self.config).scroll_and_click(IMG.TKS_FREE_DONE, A_INSTANCE_MENUS)
 
         assert fgoDevice.device.available
-        context = TksContext(self.config, 'sufftechni')
-        context.current_job = 'campaign_free'
+        context = TksContext(self.config, 'extertena')
+        context.current_job = 'any_rank_up'
+        self.run_rank_up(context)
         # self.run_synthesis(context)
         # print(context.current_job[20])
-        battle = TksBattle(context)
-        battle()
+        # self.run_free(context)
         # turn._setup_turn(1)
 
         # TksBattleGroup(context).choose_friend()
@@ -122,6 +123,7 @@ class TksMain:
             times = 0
             while times < 3:
                 try:
+                    fuse.timeout_time = time.time() + 300
                     itfc = TksInterface(context)
                     itfc.switch_to_account(context.account)
                     TksCommon().back_to_top()
@@ -138,14 +140,19 @@ class TksMain:
 
             for job_name in context.job_names:
                 context.current_job = job_name
+                jc = context.cur_job_context()
                 times = 0
                 while times < 3:
                     try:
                         logger.info("Run job " + job_name)
+                        if jc.timeout():
+                            fuse.timeout_time = time.time() + jc.timeout()
+                        else:
+                            fuse.timeout_time = None
                         getattr(self, f'run_{context.job_configs[job_name]["type"]}')(context)
                         logger.info("Finish running job " + job_name)
                         break
-                    except (StuckException, FlowException) as ex:
+                    except (StuckException, TimeoutException, FlowException) as ex:
                         self._report_exception(ex)
                         logger.info('Cleanup and continue')
                         self._cleanup()
@@ -167,10 +174,8 @@ class TksMain:
             TksDetect.cache.save('fgoLog/Exception')
 
     def run_free(self, context):
-        cjc = context.cur_job_context()
         self.common.back_to_top()
-        TksInterface(context).go_free_instance(cjc.chapter(), cjc.section(), cjc.instance())
-        return TksBattleGroup(context)()
+        return TksInterface(context).run_free()
 
     def run_campaign_main(self, context):
         self.common.back_to_top()
@@ -190,6 +195,14 @@ class TksMain:
             exp_ball.burning()
         exp_ball.synthesis_servant()
         exp_ball.synthesis_reisou()
+
+    def run_interlude(self, context):
+        self.common.back_to_top()
+        TksInterface(context).run_interlude()
+
+    def run_rank_up(self, context):
+        self.common.back_to_top()
+        TksInterface(context).run_rank_up()
 
     def run_skip(self, context):
         logger.info('skip this job')

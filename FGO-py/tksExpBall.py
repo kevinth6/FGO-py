@@ -165,9 +165,12 @@ class TksExpBall:
             self._handle_synthesis_reisou_option()
             self.context.synthesis_reisou_checked = True
 
-        pos = self._find_last_locked_reisou()
+        for i in range(3):
+            if pos := self._find_last_locked_reisou():
+                break
         if not pos:
             raise FlowException('No reisou for synthesis.')
+
         logger.info(f'Found reisou for synthesis {pos}.')
         self.common.click(pos, offset=(60, 0), after_delay=1.5) \
             .wait_btn(B_BACK) \

@@ -1,6 +1,6 @@
 import fgoDevice
 import fgoSchedule
-from fgoDetect import IMG
+from fgoFuse import TimeoutException
 from fgoLogging import getLogger
 from tksDetect import *
 from tksCommon import FlowException, TksCommon, AbandonException
@@ -78,6 +78,8 @@ class TksTurn(Turn):
                 cards = str(turn_conf['cards'])
                 logger.info(f'cards: {cards}')
                 fgoDevice.device.perform(cards, (300, 300, 2300, 1300, 6000))
+            except TimeoutException as tex:
+                raise tex
             except Exception as ex:
                 logger.error(ex, exc_info=True)
                 super().__call__(turn)
@@ -128,7 +130,7 @@ class TksTurn(Turn):
 
     def castMasterSkillWithSwap(self, skill, servant1, servant2):
         self.countDown[1][skill] = 15
-        fgoDevice.device.perform('Q' + 'WER'[skill], (300, 300))
+        fgoDevice.device.perform('Q' + 'WER'[skill], (500, 500))
         fgoDevice.device.perform(('TYUIOP'[servant1 - 1], 'TYUIOP'[servant2 - 1], 'Z'), (500, 500, 2600))
         while not TksDetect().isTurnBegin():
             pass
@@ -151,9 +153,8 @@ class TksBattleGroup:
                 logger.info("can't enter battle, exit battle group")
                 return False
             battle = TksBattle(self.context)
-            self._after_battle(battle(), battle.result)
-            if self.run_once:
-                logger.info('run once done. exit battle group ')
+            if not self._after_battle(battle(), battle.result):
+                logger.info('Exit battle group ')
                 break
         return True
 
@@ -201,7 +202,7 @@ class TksBattleGroup:
                 logger.info('Dialog pops up. click close')
                 t.click(p)
                 dialogs += 1
-                if dialogs > MAX_DIALOGS_BEFORE_BATTLE:
+                if dialogs >= MAX_DIALOGS_BEFORE_BATTLE:
                     raise AbandonException('Too many dialogs here, may meet some constraint rules.')
             elif t.appear(IMG.TKS_CHOOSE_FRIEND, A_TOP_RIGHT):
                 logger.info('choose friend. ')
@@ -209,7 +210,7 @@ class TksBattleGroup:
                 # could enter the battle directly if it's in battle continue
             elif t.appear(IMG.TKS_TEAM_CONFIRM, A_TOP_RIGHT):
                 self.choose_team()
-                fgoDevice.device.perform(' ', (5000,))
+                fgoDevice.device.perform(' ', (2000,))
             elif t.appear_btn(B_SUMMON_SALE):
                 # synthesis only handled in cleanup
                 raise FlowException('Card position full. Need synthesis. ')
@@ -242,11 +243,15 @@ class TksBattleGroup:
         # handle battle continue
         if TksDetect().isBattleContinue():
             if self.run_once:
-                logger.info('cancel battle continue')
+                logger.info('Run once, cancel battle continue')
                 fgoDevice.device.perform('F', (1000,))
+                return False
             else:
                 logger.info('battle continue')
                 fgoDevice.device.perform('L', (1000,))
+                return True
+        else:
+            return False
 
     def choose_friend(self):
         if not self.jc.friend_reisou():
@@ -263,7 +268,7 @@ class TksBattleGroup:
             if t.isNoFriend() or not has_friend:
                 self.common.wait(IMG.TKS_FRIEND_REFRESH, A_FRIEND_OPTIONS_BAR)
                 logger.info('Refresh friends.')
-                fgoDevice.device.perform('\xBAK', (500, 1000))
+                fgoDevice.device.perform('\xBAK', (800, 1000))
                 has_friend = True
             else:
                 if p := self.common.scroll_and_find(self._friend_find_func(), end_pos=P_FRIEND_SCROLL_END,

@@ -89,44 +89,48 @@ class TksCommon:
 
     def scroll_and_find(self, func, end_pos=P_RIGHT_SCROLL_END, max_swipe=20, top_pos=P_SCROLL_TOP,
                         scroll_area=A_SWIPE_RIGHT_DOWN):
-        self.click(top_pos, after_delay=.5)
+        self.click(top_pos, after_delay=.8)
         for i in range(max_swipe):
             if (s := func(TksDetect(), i)) or TksDetect.cache.is_list_end(end_pos) or \
                     not TksDetect.cache.appear(IMG.LISTBAR, clamp_rect(
                         (top_pos[0] - 35, top_pos[1] - 35, end_pos[0] + 35, end_pos[1] + 35))):
                 break
             fgoDevice.device.swipe(scroll_area)
-            schedule.sleep(0.3)
+            schedule.sleep(.5)
 
         return s
 
-    def scroll_and_click(self, img, area, end_pos=P_RIGHT_SCROLL_END, max_swipe=20, top_pos=P_SCROLL_TOP):
+    def scroll_and_click(self, img, area, end_pos=P_RIGHT_SCROLL_END, max_swipe=20, top_pos=P_SCROLL_TOP,
+                         threshold=.05):
         """You must guarantee the menu exists, otherwise Exception thrown."""
-        if s := self.scroll_and_find(lambda t, i: t.find(img, area), end_pos, max_swipe, top_pos):
+        if s := self.scroll_and_find(lambda t, i: t.find(img, area, threshold), end_pos, max_swipe, top_pos):
             TksDetect.cache.click(s)
             return self
         else:
             raise FlowException("Can't find the target to click, area " + str(area))
 
-    def find_dialog_close(self, detect):
-        if p := detect.find(IMG.TKS_DIALOG_CLOSE, A_DIALOG_BUTTONS) \
-                or detect.find(IMG.TKS_DIALOG_CLOSE2, A_DIALOG_BUTTONS) \
-                or detect.find(IMG.APEMPTY, A_DIALOG_BUTTONS):
+    def find_dialog_close(self, t):
+        if p := t.find(IMG.TKS_DIALOG_CLOSE, A_DIALOG_BUTTONS) \
+                or t.find(IMG.TKS_DIALOG_CLOSE2, A_DIALOG_BUTTONS) \
+                or t.find(IMG.APEMPTY, A_DIALOG_BUTTONS):
             logger.info("Dialog found with close button")
             return p
-        elif p := detect.find(IMG.TKS_CANCEL, A_DIALOG_BUTTONS):
+        elif p := t.find(IMG.TKS_CANCEL, A_DIALOG_BUTTONS):
             logger.info("Dialog found with cancel button")
             return p
-        elif p := detect.find(IMG.TKS_EXIT, A_DIALOG_BUTTONS):
+        elif p := t.find(IMG.TKS_EXIT, A_DIALOG_BUTTONS):
             logger.info("Dialog found with exit button")
             return p
-        elif p := detect.find(IMG.TKS_CROSS, A_FULL_DIALOG_CROSS):
+        elif p := t.find(IMG.TKS_CROSS, A_FULL_DIALOG_CROSS):
             logger.info("Dialog found with cross button")
             return p
-        elif p := detect.find(IMG.TKS_DIALOG_FORWARD, A_FULL_DIALOG_CONFIRM):
+        elif p := t.find(IMG.TKS_DIALOG_FORWARD, A_FULL_DIALOG_CONFIRM):
             logger.info("Dialog found with forward button")
             return p
-        elif detect.appear_btn(B_NOTICE):
+        elif p := t.find(IMG.TKS_CANCEL_TEAM, A_TOP_MIDDLE):
+            logger.info("Cancel team dialog found")
+            return t.find(IMG.TKS_DIALOG_DECIDE, A_DIALOG_BUTTONS)
+        elif t.appear_btn(B_NOTICE):
             logger.info("Notice dialog found")
             return P_NOTICE_CLOSE
         else:

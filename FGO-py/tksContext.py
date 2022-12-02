@@ -162,6 +162,10 @@ class TksJobContext:
     def apple_remaining(self):
         return self.apple_used < self.apples()
 
+    def timeout(self):
+        """timeout setting"""
+        return safe_get(self.job_config, 'timeout')
+
     def apples(self):
         """apple to eat in battle"""
         return safe_get(self.job_config, 'apples')

@@ -3,6 +3,7 @@ import sys
 from fgoConst import VERSION
 import fgoDevice
 import fgoLogging
+import fgoSchedule
 
 
 with open('tksConfig.yaml', "r", encoding="utf-8") as f:
@@ -16,6 +17,9 @@ if 'loggerLevel' in tksConfig:
 
 if 'device' in tksConfig:
     fgoDevice.device = fgoDevice.Device(tksConfig['device'])
+
+if 'speed' in tksConfig:
+    fgoSchedule.Schedule.speed = tksConfig['speed']
 
 from tksMain import TksMain
 TksMain(args, tksConfig)()
