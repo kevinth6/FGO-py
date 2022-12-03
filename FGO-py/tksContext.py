@@ -16,15 +16,6 @@ class TksContext:
         self._setup_job_contexts()
         self.current_job = None
         self.battle_options_checked = False
-        self.campaign_friend_checked = False
-        self.summon_option_checked = False
-        self.synthesis_reisou_checked = False
-        self.synthesis_reisou_food_checked = False
-        self.synthesis_servant_checked = False
-        self.synthesis_servant_food_checked = False
-        self.servant_burning_checked = False
-        self.reisou_burning_checked = False
-        self.code_burning_checked = False
 
     def _setup_presets(self, config, account):
         self.presets = {}
@@ -143,6 +134,15 @@ class TksJobContext:
         self.summon_count = 0
         self.special_drops = 0
         self.materials = {}
+        self.campaign_friend_checked = False
+        self.summon_option_checked = False
+        self.synthesis_reisou_checked = False
+        self.synthesis_reisou_food_checked = False
+        self.synthesis_servant_checked = False
+        self.synthesis_servant_food_checked = False
+        self.servant_burning_checked = False
+        self.reisou_burning_checked = False
+        self.code_burning_checked = False
 
     def out(self):
         ret = collections.OrderedDict()
@@ -160,7 +160,7 @@ class TksJobContext:
         return ret
 
     def apple_remaining(self):
-        return self.apple_used < self.apples()
+        return self.apples() and self.apple_used < self.apples()
 
     def timeout(self):
         """timeout setting"""

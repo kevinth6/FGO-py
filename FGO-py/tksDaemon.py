@@ -32,7 +32,7 @@ def run_script():
         j = 0
         while j < 3:
             # guarantee the script process steady running
-            time.sleep(30)
+            time.sleep(20)
             if not find_pid(daemonConf['script_proc_name']):
                 log('Script failed to launch')
                 break

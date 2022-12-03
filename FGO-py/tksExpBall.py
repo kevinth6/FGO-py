@@ -52,9 +52,9 @@ class TksExpBall:
         while not self.jc.max_summon() or self.jc.summon_count < self.jc.max_summon():
             t = TksDetect()
             if t.appear_btn(B_SUMMON_AUTO_SALE):
-                if not self.context.summon_option_checked:
+                if not self.jc.summon_option_checked:
                     self._handle_summon_option()
-                    self.context.summon_option_checked = True
+                    self.jc.summon_option_checked = True
                 self.jc.summon_count += 1
                 logger.info(f'Summon {self.jc.summon_count}.')
                 t.click(B_SUMMON_SUBMIT.center, after_delay=3)
@@ -86,25 +86,25 @@ class TksExpBall:
 
         logger.info('Burn servants.')
         self.common.click(P_SELECT_SERVANT)
-        if not self.context.servant_burning_checked:
+        if not self.jc.servant_burning_checked:
             self._handle_servant_burning_option()
-            self.context.servant_burning_checked = True
+            self.jc.servant_burning_checked = True
         self._burn_all()
 
         if self.jc.reisou_food_max_star() and self.jc.reisou_food_max_star() >= 3:
             logger.info('Burn reisou.')
             self.common.click(P_SELECT_REISOU)
-            if not self.context.reisou_burning_checked:
+            if not self.jc.reisou_burning_checked:
                 self._handle_reisou_burning_option()
-                self.context.reisou_burning_checked = True
+                self.jc.reisou_burning_checked = True
             self._burn_all()
 
         logger.info('Burn command codes.')
         self.common.click(P_SELECT_CODE)
         burn = True
-        if not self.context.code_burning_checked:
+        if not self.jc.code_burning_checked:
             if self._handle_code_burning_option():
-                self.context.code_burning_checked = True
+                self.jc.code_burning_checked = True
             else:
                 burn = False
         if burn:
@@ -123,9 +123,9 @@ class TksExpBall:
         offset_x = 60
         while True:
             self.common.click(B_SYNTHESIS_LOAD.center, 3)
-            if not self.context.synthesis_servant_checked:
+            if not self.jc.synthesis_servant_checked:
                 self._handle_synthesis_servant_option()
-                self.context.synthesis_servant_checked = True
+                self.jc.synthesis_servant_checked = True
 
             self.common.click(B_SELECT_LOCK.offset(offset_x, 0).center, after_delay=2)
             if TksDetect().appear_btn(B_SYNTHESIS_BTN_DISABLED):
@@ -137,9 +137,9 @@ class TksExpBall:
             self.common.click(P_SYNTHESIS_ENTER, 1) \
                 .wait(B_SELECT_FINISH.img, A_BR_BUTTONS)
 
-            if not self.context.synthesis_servant_food_checked:
+            if not self.jc.synthesis_servant_food_checked:
                 self._handle_synthesis_servant_food_option()
-                self.context.synthesis_servant_food_checked = True
+                self.jc.synthesis_servant_food_checked = True
 
             while True:
                 if not self._select_food_and_synthesis():
@@ -161,13 +161,14 @@ class TksExpBall:
             .click(P_SYNTHESIS_SYNTHESIS, after_delay=3) \
             .wait_and_click_btn(B_SYNTHESIS_LOAD, after_delay=3)
 
-        if not self.context.synthesis_reisou_checked:
+        if not self.jc.synthesis_reisou_checked:
             self._handle_synthesis_reisou_option()
-            self.context.synthesis_reisou_checked = True
+            self.jc.synthesis_reisou_checked = True
 
         for i in range(3):
             if pos := self._find_last_locked_reisou():
                 break
+            schedule.sleep(2)
         if not pos:
             raise FlowException('No reisou for synthesis.')
 
@@ -177,9 +178,9 @@ class TksExpBall:
             .click(P_SYNTHESIS_ENTER, 1) \
             .wait_btn(B_SELECT_FINISH)
 
-        if not self.context.synthesis_reisou_food_checked:
+        if not self.jc.synthesis_reisou_food_checked:
             self._handle_synthesis_reisou_food_option()
-            self.context.synthesis_reisou_food_checked = True
+            self.jc.synthesis_reisou_food_checked = True
 
         while True:
             if not self._select_food_and_synthesis():

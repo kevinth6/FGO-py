@@ -255,10 +255,10 @@ class TksBattleGroup:
 
     def choose_friend(self):
         if not self.jc.friend_reisou():
-            if not self.context.campaign_friend_checked and \
+            if not self.jc.campaign_friend_checked and \
                     (self.jc.campaign_servant() or self.jc.campaign_reisou()):
                 self._handle_campaign_friend_options()
-                self.context.campaign_friend_checked = True
+                self.jc.campaign_friend_checked = True
         if self.jc.friend_class() and self.jc.friend_class() in PS_FRIEND_CLASSES:
             self.common.click(PS_FRIEND_CLASSES[self.jc.friend_class()], after_delay=1)
 
