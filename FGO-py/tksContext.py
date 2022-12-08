@@ -159,6 +159,9 @@ class TksJobContext:
         ret["materials"] = self.materials
         return ret
 
+    def type(self):
+        return safe_get(self.job_config, 'type')
+
     def apple_remaining(self):
         return self.apples() and self.apple_used < self.apples()
 
@@ -214,6 +217,10 @@ class TksJobContext:
         """specify which campaign reisou to enable in the friend selection options, will disable all other,
         the index starts from 0, from top to bottom"""
         return safe_get(self.job_config, 'campaign_reisou_idx')
+
+    def campaign_no_map(self):
+        """specify if the campaign doesn't have a map, affects the instance search"""
+        return safe_get(self.job_config, 'campaign_no_map')
 
     def friend_reisou(self):
         """specify the reisou in the friend selection, name of images in friend_reisou,

@@ -175,7 +175,9 @@ class TksDetect(XDetect):
 
     def is_on_campaign_shop(self):
         return self.appear(IMG.TKS_CAMPAIGN_SHOP_OFF, A_CAMPAIGN_REWARD_TABS, threshold=.02) \
-               or self.appear(IMG.TKS_CAMPAIGN_SHOP_ON, A_CAMPAIGN_REWARD_TABS, threshold=.02)
+               or self.appear(IMG.TKS_CAMPAIGN_SHOP_ON, A_CAMPAIGN_REWARD_TABS, threshold=.02) \
+               or self.appear(IMG.TKS_CAMPAIGN_SHOP_OFF_2, A_CAMPAIGN_REWARD_TABS, threshold=.02) \
+               or self.appear(IMG.TKS_CAMPAIGN_SHOP_ON_2, A_CAMPAIGN_REWARD_TABS, threshold=.02)
 
     def is_list_end(self, pos):
         return self.appear(IMG.LISTBAR, (pos[0] - 19, 0, pos[0] + 19, 720)) and super()._isListEnd(pos)
@@ -299,6 +301,7 @@ A_LIST_BAR = (1220, 90, 1276, 710)
 A_SWIPE_CENTER_DOWN = (640, 650, 640, 150)
 A_SWIPE_CENTER_UP = (640, 150, 640, 650)
 A_SWIPE_RIGHT_DOWN = (950, 600, 950, 200)
+A_SWIPE_RIGHT_DOWN_LOW = (950, 680, 950, 280)
 A_BATTLE_OPTIONS = (656, 198, 1130, 488)
 A_BATTLE_CMD = (1010, 500, 1276, 714)
 A_TOP_RIGHT = (1008, 2, 1278, 82)

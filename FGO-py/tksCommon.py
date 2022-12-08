@@ -87,6 +87,20 @@ class TksCommon:
 
         return self
 
+    def go_chapter(self, chapter):
+        if not (chapter in INSTANCES):
+            raise AbandonException(f'Unknown chapter {chapter}')
+
+        for i in range(1, 3):
+            if str(i) in INSTANCES[chapter]['menus']:
+                logger.info(f'Go to chapter menu {i}')
+                self.wait_for_submenu()
+                schedule.sleep(.8)
+                self.scroll_and_click(INSTANCES[chapter]['menus'][str(i)], A_SUB_MENUS,
+                                      scroll_area=A_SWIPE_RIGHT_DOWN_LOW)
+            else:
+                break
+
     def scroll_and_find(self, func, end_pos=P_RIGHT_SCROLL_END, max_swipe=20, top_pos=P_SCROLL_TOP,
                         scroll_area=A_SWIPE_RIGHT_DOWN):
         self.click(top_pos, after_delay=.8)
@@ -101,9 +115,10 @@ class TksCommon:
         return s
 
     def scroll_and_click(self, img, area, end_pos=P_RIGHT_SCROLL_END, max_swipe=20, top_pos=P_SCROLL_TOP,
-                         threshold=.05):
+                         threshold=.05, scroll_area=A_SWIPE_RIGHT_DOWN):
         """You must guarantee the menu exists, otherwise Exception thrown."""
-        if s := self.scroll_and_find(lambda t, i: t.find(img, area, threshold), end_pos, max_swipe, top_pos):
+        if s := self.scroll_and_find(lambda t, i: t.find(img, area, threshold), end_pos, max_swipe, top_pos,
+                                     scroll_area):
             TksDetect.cache.click(s)
             return self
         else:
@@ -127,9 +142,6 @@ class TksCommon:
         elif p := t.find(IMG.TKS_DIALOG_FORWARD, A_FULL_DIALOG_CONFIRM):
             logger.info("Dialog found with forward button")
             return p
-        elif p := t.find(IMG.TKS_CANCEL_TEAM, A_TOP_MIDDLE):
-            logger.info("Cancel team dialog found")
-            return t.find(IMG.TKS_DIALOG_DECIDE, A_DIALOG_BUTTONS)
         elif t.appear_btn(B_NOTICE):
             logger.info("Notice dialog found")
             return P_NOTICE_CLOSE
@@ -242,16 +254,20 @@ class TksCommon:
 
     def go_on_map_and_menu(self, map_img, menu_img, map_screen, map_pos, menu_scroll, menu_pos):
         """search by images first, if not found, search by swipe and pos"""
-        if p := self.swipe_on_map_and_do(lambda t, st: t.find(map_img, threshold=.1)):
-            p = self.click_and_wait_for_menu_view(p)
+        if not map_img and not map_screen and not map_pos:
+            logger.info("Campaign have no map, skip the map locating")
+            p = True
+        else:
+            if p := self.swipe_on_map_and_do(lambda t, st: t.find(map_img, threshold=.1)):
+                p = self.click_and_wait_for_menu_view(p)
 
-        if not p:
-            logger.info(f'find map location by screen {map_screen} and pos {map_pos}')
-            self._pinch_and_swipe_down()
-            for i in range(map_screen):
-                fgoDevice.device.swipe(A_SWIPE_CENTER_UP)
-                schedule.sleep(1)
-            p = self.click_and_wait_for_menu_view(map_pos)
+            if not p:
+                logger.info(f'find map location by screen {map_screen} and pos {map_pos}')
+                self._pinch_and_swipe_down()
+                for i in range(map_screen):
+                    fgoDevice.device.swipe(A_SWIPE_CENTER_UP)
+                    schedule.sleep(1)
+                p = self.click_and_wait_for_menu_view(map_pos)
 
         if p:
             if not (p := self.scroll_and_find(lambda t, i: t.find(menu_img, A_INSTANCE_TITLE, threshold=.01))):

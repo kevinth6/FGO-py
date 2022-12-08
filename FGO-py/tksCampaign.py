@@ -33,16 +33,24 @@ class TksCampaign:
         self.scanned_instances = []
         self.scanned_sections = []
 
+    def _go_campaign(self):
+        if self.jc.chapter():
+            self.common.go_chapter(self.jc.chapter())
+            schedule.sleep(3)
+        else:
+            self.common.click(P_CUR_CAMPAIGN, after_delay=4)
+
     def run_main_tasks(self):
         logger.info('Campaign main tasks running start')
-        self.common.click(P_CUR_CAMPAIGN, after_delay=4)
+        self._go_campaign()
         flag = 0b0000011
         while True:
             t = TksDetect(.3, .5)
             if flag & 0x4 and t.is_on_campaign_shop():
                 self._handle_campaign_shop()
                 flag = 0b00000011
-            elif flag & 0x8 and t.appear(IMG.TKS_CHOOSE_FRIEND, A_TOP_RIGHT):
+            elif flag & 0x8 and (t.appear(IMG.TKS_CHOOSE_FRIEND, A_TOP_RIGHT)
+                                 or t.appear(IMG.TKS_TEAM_CONFIRM, A_TOP_RIGHT)):
                 TksBattleGroup(self.context, run_once=True)()
                 flag = 0b10100111
             elif flag & 0x10 and t.find_and_click(IMG.TKS_CAMPAIGN_BEGIN, A_DIALOG_BUTTONS):
@@ -84,15 +92,15 @@ class TksCampaign:
                         else:
                             break
             elif flag & 0x2 and t.is_on_menu():
-                if self._search_menu_tasks():
+                if self.common.scroll_and_find(lambda t, i: self._search_menu_tasks()):
                     flag = 0b11011000
                 else:
                     logger.info("On menu but nothing to do. ")
                     t.click(P_TL_BUTTON)
                     flag = 0b00000011
             elif t.is_on_top():
-                logger.info("Unexpected back to top. ")
-                return False
+                logger.info("Back to top. Exit")
+                break
             elif flag & 0x80 and (p := t.find(IMG.TKS_OPTION_STUCK)):
                 t.click(p)
             elif flag & 0x80 and self.common.skip_possible_story():
@@ -104,16 +112,20 @@ class TksCampaign:
         return True
 
     def run_free(self):
-        self.common.click(P_CUR_CAMPAIGN, after_delay=4)
         logger.info('Campaign free instances running start.')
+        self._go_campaign()
         self.scanned_instances.clear()
         self.scanned_sections.clear()
         self.first_free.clear()
         self.regular_free.clear()
-        while not TksDetect().is_on_map():
-            TksDetect().cache.find_and_click_btn(B_MAIN_TL_CLOSE, after_delay=1)
-
-        self.common.swipe_on_map_and_do(lambda t, st: self._scan_free_instances(t, st))
+        if self.jc.campaign_no_map():
+            logger.info("Campaign have no map, search the instances on menu.")
+            func = (lambda t, i: self._find_free(t, None, None, i, None))
+            self.common.scroll_and_find(func)
+        else:
+            while not TksDetect().is_on_map():
+                TksDetect().cache.find_and_click_btn(B_MAIN_TL_CLOSE, after_delay=1)
+            self.common.swipe_on_map_and_do(lambda t, st: self._scan_free_instances(t, st))
         logger.info(f'Instance scanned. first free: {len(self.first_free)}, regular free: {len(self.regular_free)}')
 
         ret = True
@@ -175,12 +187,14 @@ class TksCampaign:
 
     def _run_free_instance(self, instance):
         """return False means stop running following. True means continue."""
-        if not TksDetect().is_on_map():
-            TksDetect().cache.find_and_click_btn(B_MAIN_TL_CLOSE, after_delay=1)
+        if not self.jc.campaign_no_map() and not TksDetect().is_on_map():
+            TksDetect().click(P_TL_BUTTON, after_delay=1)
+        if TksDetect().is_on_top():
+            self._go_campaign()
         while p := self.common.find_dialog_close(TksDetect()):
             TksDetect.cache.click(p, after_delay=1)
 
-        logger.info(f'Go on map and menu. ')
+        logger.info(f'Go find the instance on map and menu. ')
         self.common.go_on_map_and_menu(instance.map_img, instance.menu_img, instance.map_screen, instance.map_pos,
                                        instance.menu_scroll, instance.menu_pos)
         if TksDetect().is_on_map():
@@ -213,18 +227,18 @@ class TksCampaign:
                 logger.info('close dialog on ' + str(p))
                 t.click(p, after_delay=.8)
             elif flag & 0x1 and t.is_on_map():
-                logger.info('On map.')
+                logger.info('On map, end instance')
                 return True
             elif flag & 0x2 and t.is_on_menu():
-                logger.info('On menu, back')
-                self.common.click(P_TL_BUTTON)
-                flag = 0b00000011
+                logger.info('On instance menu, end instance')
+                return True
+            elif t.is_on_top():
+                logger.info('On top, end instance')
+                return True
             elif t.is_on_campaign_shop():
                 logger.info('On shop, unexpected, back')
                 self.common.click(P_TL_BUTTON)
                 flag = 0b00000001
-            elif flag & 0x80 and self.common.skip_possible_story():
-                flag = 0b10111111
             else:
                 fgoDevice.device.perform('\xBB', (800,))
 
@@ -348,7 +362,7 @@ class TksCampaign:
         ret = self._find_free_instance(t, IMG.TKS_INSTANCE_GOLD, mps, mpp, mus, mpimg, 3, True) or ret
         ret = self._find_free_instance(t, IMG.TKS_INSTANCE_GREEN, mps, mpp, mus, mpimg, 4, True) or ret
 
-        # ret = self._find_free_instance(t, IMG.TKS_INSTANCE_BRONZE_DONE, mps, map_pos, menu_scroll, 1) or ret
+        ret = self._find_free_instance(t, IMG.TKS_INSTANCE_BRONZE_DONE, mps, mpp, mus, mpimg, 1) or ret
         ret = self._find_free_instance(t, IMG.TKS_INSTANCE_SILVER_DONE, mps, mpp, mus, mpimg, 2) or ret
         ret = self._find_free_instance(t, IMG.TKS_INSTANCE_GOLD_DONE, mps, mpp, mus, mpimg, 3) or ret
         ret = self._find_free_instance(t, IMG.TKS_INSTANCE_GREEN_DONE, mps, mpp, mus, mpimg, 4) or ret

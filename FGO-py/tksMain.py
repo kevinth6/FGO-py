@@ -24,6 +24,7 @@ class TksMain:
         self.common = TksCommon()
 
     def __call__(self):
+        fgoDevice.Device.enumDevices()
         getattr(self, f'do_{self.args.subcmd}')()
 
     def _cleanup(self):
@@ -47,6 +48,8 @@ class TksMain:
                     logger.info('Click not continue')
                 elif t.find_and_click(IMG.TKS_INTERRUPTED_BATTLE_ENTER, A_DIALOG_BUTTONS):
                     logger.info('Continue interrupted battle')
+                elif t.find_and_click(IMG.TKS_DIALOG_UPDATE, A_DIALOG_BUTTONS):
+                    logger.info('Click update game')
                 elif t.appear_btn(B_SUMMON_SALE):
                     logger.info('Card position full. Start synthesis. ')
                     self.run_synthesis(TksContext.anonymous_context())
@@ -79,9 +82,9 @@ class TksMain:
         # TksCommon(self.config).scroll_and_click(IMG.TKS_FREE_DONE, A_INSTANCE_MENUS)
 
         assert fgoDevice.device.available
-        context = TksContext(self.config, 'extertena')
-        context.current_job = 'any_rank_up'
-        self.run_rank_up(context)
+        context = TksContext(self.config, 'militaoccasi')
+        context.current_job = 'campaign_main'
+        self.run_campaign_free(context)
         # self.run_synthesis(context)
         # print(context.current_job[20])
         # self.run_free(context)
@@ -141,6 +144,8 @@ class TksMain:
             for job_name in context.job_names:
                 context.current_job = job_name
                 jc = context.cur_job_context()
+                if not jc.type():
+                    continue
                 times = 0
                 while times < 3:
                     try:
@@ -149,7 +154,7 @@ class TksMain:
                             fuse.timeout_time = time.time() + jc.timeout()
                         else:
                             fuse.timeout_time = None
-                        getattr(self, f'run_{context.job_configs[job_name]["type"]}')(context)
+                        getattr(self, f'run_{jc.type()}')(context)
                         logger.info("Finish running job " + job_name)
                         break
                     except (StuckException, TimeoutException, FlowException) as ex:

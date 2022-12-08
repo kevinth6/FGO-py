@@ -129,22 +129,9 @@ class TksInterface:
         else:
             raise FlowException(f'Unable to find the section {section}')
 
-    def go_chapter(self, chapter):
-        if not (chapter in INSTANCES):
-            raise AbandonException(f'Unknown chapter {chapter}')
-
-        for i in range(1, 3):
-            if str(i) in INSTANCES[chapter]['menus']:
-                logger.info(f'Go to chapter menu {i}')
-                self.common.wait_for_submenu()
-                schedule.sleep(.8)
-                self.common.scroll_and_click(INSTANCES[chapter]['menus'][str(i)], A_SUB_MENUS)
-            else:
-                break
-
     def go_free_instance(self, chapter, section, instance):
         logger.info(f'Go to free instance: chapter {chapter}, section {section}, instance {instance}')
-        self.go_chapter(chapter)
+        self.common.go_chapter(chapter)
 
         if section and (str(section) in INSTANCES[chapter]['sections']):
             while not TksDetect().is_on_map():
@@ -172,13 +159,13 @@ class TksInterface:
 
     def run_interlude(self):
         logger.info(f'Go interlude')
-        self.go_chapter('interlude')
+        self.common.go_chapter('interlude')
         schedule.sleep(1)
 
         after = False
         while True:
             t = TksDetect(.3, .3)
-            if t.appear(IMG.TKS_CHOOSE_FRIEND, A_TOP_RIGHT):
+            if t.appear(IMG.TKS_CHOOSE_FRIEND, A_TOP_RIGHT) or t.appear(IMG.TKS_TEAM_CONFIRM, A_TOP_RIGHT):
                 TksBattleGroup(self.context, run_once=True)()
                 after = True
             elif t.isApEmpty():
@@ -193,6 +180,8 @@ class TksInterface:
                 self.common.click(p, .7)
             elif t.find_and_click(IMG.TKS_DIALOG_BEGIN, A_DIALOG_BUTTONS):
                 logger.info('click begin')
+            elif t.appear_btn(B_SUMMON_SALE):
+                raise FlowException('Card position full. Need synthesis. ')
             elif p := self.common.find_dialog_close(t):
                 self.common.click(p, .7)
             elif t.is_on_menu():
@@ -221,8 +210,10 @@ class TksInterface:
                         break
             elif t.is_on_top():
                 logger.info("Unexpected on top. Re-enter")
-                self.go_chapter('interlude')
+                self.common.go_chapter('interlude')
                 schedule.sleep(1)
+            elif p := t.find(IMG.TKS_OPTION_STUCK):
+                t.click(p)
             elif self.common.skip_possible_story():
                 pass
             else:
@@ -235,7 +226,7 @@ class TksInterface:
 
     def run_rank_up(self):
         logger.info(f'Go rank up')
-        self.go_chapter('rank_up')
+        self.common.go_chapter('rank_up')
         schedule.sleep(1)
 
         while True:
@@ -251,6 +242,8 @@ class TksInterface:
                 logger.info('Special dropped.')
             elif t.find_and_click(IMG.TKS_DIALOG_BEGIN, A_DIALOG_BUTTONS):
                 logger.info('click begin')
+            elif t.appear_btn(B_SUMMON_SALE):
+                raise FlowException('Card position full. Need synthesis. ')
             elif p := self.common.find_dialog_close(t):
                 self.common.click(p, .7)
             elif t.is_on_menu():
@@ -269,7 +262,7 @@ class TksInterface:
                     break
             elif t.is_on_top():
                 logger.info("Unexpected on top. Re-enter")
-                self.go_chapter('rank_up')
+                self.common.go_chapter('rank_up')
                 schedule.sleep(1)
             else:
                 fgoDevice.device.perform('\xBB', (500,))

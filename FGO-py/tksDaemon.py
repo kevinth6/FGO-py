@@ -55,7 +55,10 @@ def main():
         script_pid = find_pid(daemonConf['script_proc_name'])
         game_pid = find_pid(daemonConf['game_proc_name'])
         if script_pid and game_pid:
-            log(f'Running game:{game_pid}, script:{script_pid}')
+            log(f'Running. Game:{game_pid}, Script:{script_pid}')
+            time.sleep(check_interval)
+            continue
+
         if script_pid and not game_pid:
             log(f'Game not running, kill script proc {script_pid}')
             kill_proc(script_pid)

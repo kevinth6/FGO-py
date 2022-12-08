@@ -211,6 +211,9 @@ class TksBattleGroup:
             elif t.appear(IMG.TKS_TEAM_CONFIRM, A_TOP_RIGHT):
                 self.choose_team()
                 fgoDevice.device.perform(' ', (2000,))
+            elif t.appear(IMG.TKS_CANCEL_TEAM, A_TOP_MIDDLE):
+                logger.info("Cancel team dialog found")
+                t.find_and_click(IMG.TKS_DIALOG_DECIDE, A_DIALOG_BUTTONS, after_delay=.8)
             elif t.appear_btn(B_SUMMON_SALE):
                 # synthesis only handled in cleanup
                 raise FlowException('Card position full. Need synthesis. ')
@@ -260,7 +263,8 @@ class TksBattleGroup:
                 self._handle_campaign_friend_options()
                 self.jc.campaign_friend_checked = True
         if self.jc.friend_class() and self.jc.friend_class() in PS_FRIEND_CLASSES:
-            self.common.click(PS_FRIEND_CLASSES[self.jc.friend_class()], after_delay=1)
+            schedule.sleep(1.5)
+            self.common.click(PS_FRIEND_CLASSES[self.jc.friend_class()], after_delay=1.5)
 
         has_friend = True
         while True:
