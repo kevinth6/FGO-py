@@ -270,7 +270,7 @@ class TksCommon:
                 p = self.click_and_wait_for_menu_view(map_pos)
 
         if p:
-            if not (p := self.scroll_and_find(lambda t, i: t.find(menu_img, A_INSTANCE_TITLE, threshold=.01))):
+            if not (p := self.scroll_and_find(lambda t, i: t.find(menu_img, A_INSTANCE_TITLE, threshold=.02))):
                 logger.info(f'find menu location by scroll {menu_scroll} and pos {menu_pos}')
                 for i in range(menu_scroll):
                     fgoDevice.device.swipe(A_SWIPE_RIGHT_DOWN)

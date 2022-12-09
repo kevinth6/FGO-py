@@ -355,10 +355,13 @@ class TksBattleGroup:
         ps = t.find_multiple(IMG.TKS_FRIEND_OPTION_HIDE, A_FRIEND_SHOW_BUTTONS)
         for p in ps:
             rect = t.surround((p[0] - 500, p[1]), 88, 44)
+            exist = False
             for img in reisou_imgs:
                 if t.appear(img, t.expand(rect, 2)):
-                    return
-            reisou_imgs.append([t._crop(rect), None])
+                    exist = True
+                    break
+            if not exist:
+                reisou_imgs.append([t._crop(rect), None])
 
     def _enable_reisou(self, t, img):
         if p := t.find(img):

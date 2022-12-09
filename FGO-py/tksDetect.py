@@ -1,9 +1,12 @@
-import os, time, cv2, numpy, tqdm
-from fgoLogging import getLogger
-from fgoDetect import XDetect, coroutine, IMG, CLASS
-from fgoSchedule import schedule
-from fgoFuse import fuse
+import cv2
+import numpy
+import os
+
+from fgoDetect import XDetect, coroutine, IMG
 from fgoDevice import device
+from fgoFuse import fuse
+from fgoLogging import getLogger
+from fgoSchedule import schedule
 
 logger = getLogger('TksDetect')
 
@@ -284,6 +287,11 @@ P_MENU_BURNING = P_SYNTHESIS_SYNTHESIS
 P_OPTIONS_SCROLL_START = (1135, 116)
 P_OPTIONS_SCROLL_END = (1135, 561)
 P_NOT_MAX_LEVEL = (323, 295)
+P_UNLIMITED_TAB = (661, 139)
+P_UNLIMITED_GET_MULTI = (470, 432)
+P_GIFT_BTN_ON_TOP = (433, 675)
+P_GIFT_SCROLL_TOP = (935, 172)
+P_GIFT_SCROLL_END = (935, 679)
 
 # Areas
 A_SUB_MENUS = (678, 108, 1278, 566)
@@ -325,6 +333,9 @@ A_SERVANT_LEVEL_MAX_NOTICE = (1000, 472, 1238, 535)
 A_SUMMON_OPTION_EXP = (319, 229, 984, 315)
 A_SUMMON_OPTION_FOU = (319, 309, 984, 400)
 A_SUMMON_OPTION_REISOU = (319, 389, 984, 485)
+A_UNLIMITED_BUTTONS = (38, 250, 557, 566)
+A_GIFT_ICONS = (83, 143, 240, 718)
+
 
 PS_FRIEND_CLASSES = {
     ['any', 'saber', 'archer', 'lancer', 'rider', 'caster', 'assassin', 'berserker', 'ex', 'all'][i]: (91 + i * 68, 128)

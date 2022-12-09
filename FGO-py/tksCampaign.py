@@ -46,11 +46,8 @@ class TksCampaign:
         flag = 0b0000011
         while True:
             t = TksDetect(.3, .5)
-            if flag & 0x4 and t.is_on_campaign_shop():
-                self._handle_campaign_shop()
-                flag = 0b00000011
-            elif flag & 0x8 and (t.appear(IMG.TKS_CHOOSE_FRIEND, A_TOP_RIGHT)
-                                 or t.appear(IMG.TKS_TEAM_CONFIRM, A_TOP_RIGHT)):
+            if flag & 0x8 and (t.appear(IMG.TKS_CHOOSE_FRIEND, A_TOP_RIGHT)
+                               or t.appear(IMG.TKS_TEAM_CONFIRM, A_TOP_RIGHT)):
                 TksBattleGroup(self.context, run_once=True)()
                 flag = 0b10100111
             elif flag & 0x10 and t.find_and_click(IMG.TKS_CAMPAIGN_BEGIN, A_DIALOG_BUTTONS):
@@ -72,25 +69,23 @@ class TksCampaign:
             elif t.appear_btn(B_SUMMON_SALE):
                 # synthesis only handled in cleanup
                 raise FlowException('Card position full. Need synthesis. ')
+            elif t.is_on_campaign_shop():
+                logger.info('On shop, back')
+                self.common.click(P_TL_BUTTON)
+                flag = 0b00000011
             elif p := self.common.find_dialog_close(t):
                 logger.info('close dialog on ' + str(p))
                 t.click(p, after_delay=.8)
             elif flag & 0x1 and t.is_on_map():
-                if self.jc.handle_campaign_reward() and \
-                        (p := t.find(IMG.TKS_REWARD_AVAILABLE, A_TOP_RIGHT, threshold=.02)):
-                    logger.info('Found available rewards. Go to reward view.')
-                    t.click(p)
-                    flag = 0b00000101
+                ret = self._search_map_tasks(t)
+                if ret:
+                    flag = 0b11011000
                 else:
-                    ret = self._search_map_tasks(t)
-                    if ret:
-                        flag = 0b11011000
+                    # go back and forth to find the task
+                    if f := self._back_and_forth_find_task(t):
+                        flag = f
                     else:
-                        # go back and forth to find the task
-                        if f := self._back_and_forth_find_task(t):
-                            flag = f
-                        else:
-                            break
+                        break
             elif flag & 0x2 and t.is_on_menu():
                 if self.common.scroll_and_find(lambda t, i: self._search_menu_tasks()):
                     flag = 0b11011000
@@ -158,6 +153,49 @@ class TksCampaign:
 
         return ret
 
+    def retrieve_campaign_reward(self):
+        logger.info('Retrieve campaign reward')
+        self._go_campaign()
+        while True:
+            t = TksDetect(.3, .5)
+            if t.is_on_campaign_shop():
+                self._handle_campaign_reward()
+                schedule.sleep(1)
+            elif t.is_on_map() or t.is_on_menu():
+                if p := t.find(IMG.TKS_REWARD_AVAILABLE, A_TOP_RIGHT, threshold=.02):
+                    self.common.click(p)
+                else:
+                    logger.info('No campaign reward, exit')
+                    break
+            elif t.is_on_top():
+                break
+            elif p := self.common.find_dialog_close(t):
+                t.click(p, after_delay=.7)
+            else:
+                fgoDevice.device.perform('\xBB', (800,))
+
+    def retrieve_unlimited_reward(self):
+        logger.info('Retrieve unlimited reward')
+        self._go_campaign()
+        while True:
+            t = TksDetect(.3, .5)
+            if t.is_on_campaign_shop():
+                self._handle_unlimited_reward()
+                schedule.sleep(1)
+                self._retrieve_dog_food()
+            elif t.is_on_map() or t.is_on_menu():
+                if p := t.find(IMG.TKS_CAMPAIGN_REWARD_BTN, A_TOP_RIGHT):
+                    self.common.click(p)
+                else:
+                    logger.info('No unlimited reward, exit')
+                    break
+            elif t.is_on_top():
+                break
+            elif p := self.common.find_dialog_close(t):
+                t.click(p, after_delay=.7)
+            else:
+                fgoDevice.device.perform('\xBB', (800,))
+
     def _back_and_forth_find_task(self, t):
         logger.info('Go back and forth to find a task')
         self.common.back_to_top()
@@ -165,11 +203,6 @@ class TksCampaign:
         while not TksDetect(.5, .5).is_on_map():
             pass
         schedule.sleep(3)
-
-        if p := TksDetect(.5, .5).find(IMG.TKS_REWARD_AVAILABLE, A_TOP_RIGHT, threshold=.02):
-            logger.info('Found available rewards. Go to reward view.')
-            t.click(p)
-            return 0b00000101
 
         ret = self._search_map_tasks(t)
         if ret:
@@ -236,9 +269,9 @@ class TksCampaign:
                 logger.info('On top, end instance')
                 return True
             elif t.is_on_campaign_shop():
-                logger.info('On shop, unexpected, back')
+                logger.info('On shop, back')
                 self.common.click(P_TL_BUTTON)
-                flag = 0b00000001
+                flag = 0b00000011
             else:
                 fgoDevice.device.perform('\xBB', (800,))
 
@@ -300,14 +333,7 @@ class TksCampaign:
         logger.info('No available menu tasks')
         return False
 
-    def _handle_campaign_shop(self):
-        # TODO for other kind of campaign, refactor here
-        if not self.jc.handle_campaign_reward():
-            logger.info('In campaign shop, nothing to do, exit.')
-            self.common.click(P_TL_BUTTON, after_delay=.7)
-            return
-
-        logger.info('Handle campaign rewards')
+    def _handle_campaign_reward(self):
         while True:
             t = TksDetect(.2, .5).cache
             if t.appear(IMG.TKS_CAMPAIGN_REWARD_ON, A_CAMPAIGN_REWARD_TABS, threshold=.01):
@@ -336,6 +362,38 @@ class TksCampaign:
                 t.click(P_TL_BUTTON, after_delay=.7)
             else:
                 t.click(P_CAMPAIGN_REWARD_VIEW, after_delay=.7)
+
+    def _handle_unlimited_reward(self):
+        self.common.click(P_UNLIMITED_TAB, after_delay=1)
+        while True:
+            t = TksDetect(.2, .5)
+            if t.appear(IMG.TKS_UNLIMITED_AVAILABLE, A_UNLIMITED_BUTTONS):
+                logger.info('retrieve 1 batch')
+                self.common.click(P_UNLIMITED_GET_MULTI)
+            elif t.appear(IMG.TKS_UNLIMITED_UNAVAILABLE, A_UNLIMITED_BUTTONS) \
+                    or t.appear(IMG.TKS_UNLIMITED_UNAVAILABLE2, A_UNLIMITED_BUTTONS):
+                logger.info('no unlimited reward any more.')
+                self.common.click(P_TL_BUTTON, after_delay=1)
+                break
+            else:
+                fgoDevice.device.perform('\xBB', (800,))
+
+    def _retrieve_dog_food(self):
+        self.common.back_to_top() \
+            .click(P_GIFT_BTN_ON_TOP, after_delay=2) \
+            .click(P_GIFT_SCROLL_TOP) \
+            .scroll_and_find(self._retrieve_dog_food_batch, end_pos=P_GIFT_SCROLL_END, top_pos=P_GIFT_SCROLL_TOP,
+                             scroll_area=A_SWIPE_CENTER_DOWN)
+
+    def _retrieve_dog_food_batch(self, t, i):
+        while True:
+            t = TksDetect(.2, .3)
+            if p := t.find(IMG.TKS_GIFT_DOG_FOOD_4, A_GIFT_ICONS):
+                self.common.click(p)
+            elif p := t.find(IMG.TKS_GIFT_DOG_FOOD_3, A_GIFT_ICONS):
+                self.common.click(p)
+            else:
+                break
 
     def _scan_free_instances(self, t, mps):
         logger.info(f'Scan free sections on map. screen: {mps}')

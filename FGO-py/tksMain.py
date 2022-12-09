@@ -1,4 +1,4 @@
-import argparse, cv2
+import argparse, cv2, time
 import random
 
 from fgoLogging import getLogger
@@ -82,9 +82,9 @@ class TksMain:
         # TksCommon(self.config).scroll_and_click(IMG.TKS_FREE_DONE, A_INSTANCE_MENUS)
 
         assert fgoDevice.device.available
-        context = TksContext(self.config, 'militaoccasi')
-        context.current_job = 'campaign_main'
-        self.run_campaign_free(context)
+        context = TksContext(self.config, 'sufftechni')
+        context.current_job = 'campaign_free'
+        TksBattleGroup(context)._handle_campaign_friend_options()
         # self.run_synthesis(context)
         # print(context.current_job[20])
         # self.run_free(context)
@@ -189,6 +189,15 @@ class TksMain:
     def run_campaign_free(self, context):
         self.common.back_to_top()
         return TksCampaign(context).run_free()
+
+    def run_campaign_reward(self, context):
+        self.common.back_to_top()
+        return TksCampaign(context).retrieve_campaign_reward()
+
+    def run_campaign_unlimited_reward(self, context):
+        self.common.back_to_top()
+        TksCampaign(context).retrieve_unlimited_reward()
+        TksExpBall(context).synthesis_servant()
 
     def run_exp_ball(self, context):
         self.common.back_to_top()

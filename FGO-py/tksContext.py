@@ -177,10 +177,6 @@ class TksJobContext:
         """kind of the apple, gold by default"""
         return safe_get(self.job_config, 'apple_kind')
 
-    def handle_campaign_reward(self):
-        """specify if this campaign need to handle reward"""
-        return safe_get(self.job_config, 'handle_campaign_reward')
-
     def team_index(self):
         """specify the team index in any battle, the highest priority"""
         return safe_get(self.job_config, 'team_index')
