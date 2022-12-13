@@ -272,6 +272,7 @@ class TksCommon:
         if p:
             if not (p := self.scroll_and_find(lambda t, i: t.find(menu_img, A_INSTANCE_TITLE, threshold=.02))):
                 logger.info(f'find menu location by scroll {menu_scroll} and pos {menu_pos}')
+                self.click(P_SCROLL_TOP, after_delay=.8)
                 for i in range(menu_scroll):
                     fgoDevice.device.swipe(A_SWIPE_RIGHT_DOWN)
                     schedule.sleep(.5)

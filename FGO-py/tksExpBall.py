@@ -225,9 +225,10 @@ class TksExpBall:
         # trick here, although the pos of servant B_SELECT_FINISH is different, the center still can be clicked
         self.common.click(B_SELECT_FINISH.center, 1) \
             .click(B_SELECT_FINISH.center, .5) \
+            .click(B_SUMMON_SUBMIT.center, .8) \
             .click(B_SUMMON_SUBMIT.center, 2)
         while not TksDetect().appear_btn(B_BACK):
-            self.common.click(P_SPACE, .4)
+            self.common.click(P_SPACE, .5)
         return True
 
     def _handle_synthesis_reisou_option(self):

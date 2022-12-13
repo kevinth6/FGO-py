@@ -365,6 +365,7 @@ class TksCampaign:
 
     def _handle_unlimited_reward(self):
         self.common.click(P_UNLIMITED_TAB, after_delay=1)
+        count = 0
         while True:
             t = TksDetect(.2, .5)
             if t.appear(IMG.TKS_UNLIMITED_AVAILABLE, A_UNLIMITED_BUTTONS):
@@ -372,9 +373,13 @@ class TksCampaign:
                 self.common.click(P_UNLIMITED_GET_MULTI)
             elif t.appear(IMG.TKS_UNLIMITED_UNAVAILABLE, A_UNLIMITED_BUTTONS) \
                     or t.appear(IMG.TKS_UNLIMITED_UNAVAILABLE2, A_UNLIMITED_BUTTONS):
-                logger.info('no unlimited reward any more.')
-                self.common.click(P_TL_BUTTON, after_delay=1)
-                break
+                count += 1
+                if count >= 3:
+                    logger.info('no unlimited reward any more.')
+                    self.common.click(P_TL_BUTTON, after_delay=1)
+                    break
+                else:
+                    self.common.click(P_UNLIMITED_GET_MULTI, after_delay=1)
             else:
                 fgoDevice.device.perform('\xBB', (800,))
 
@@ -444,28 +449,36 @@ class TksCampaign:
                     self.regular_free.append(instance)
 
     def _instance_scanned(self, t, new_pos, level, cls):
-        rect = t.surround((new_pos[0] - 274, new_pos[1] - 61), 180, 20)
+        rect = self._instance_img_rect(t, new_pos)
+        # t.save(name=f'test{level}-{cls}', rect=t.expand(rect, 5))
         for instance in self.scanned_instances:
-            if instance[1] == level and instance[2] == cls and t.appear(instance[0], t.expand(rect, 2), threshold=.01):
+            if instance[1] == level and instance[2] == cls and t.appear(instance[0], t.expand(rect, 5), threshold=.02):
                 return instance
 
     def _instance_add(self, t, new_pos, level, cls):
-        rect = t.surround((new_pos[0] - 274, new_pos[1] - 61), 180, 20)
+        rect = self._instance_img_rect(t, new_pos)
+        # t.save(name=f'add{level}-{cls}', rect=rect)
         ret = ([t._crop(rect), None], level, cls)
         self.scanned_instances.append(ret)
         return ret
 
+    def _instance_img_rect(self, t, new_pos):
+        return t.surround((new_pos[0] - 164, new_pos[1] - 58), 400, 24)
+
     def _section_scanned(self, t, new_pos):
-        rect = t.surround((new_pos[0] - 50, new_pos[1]), 100, 30)
+        rect = self._section_img_rect(t, new_pos)
         for section in self.scanned_sections:
             if t.appear(section, t.expand(rect, 5), threshold=.1):
                 return section
 
     def _section_add(self, t, new_pos):
-        rect = t.surround((new_pos[0] - 50, new_pos[1]), 100, 20)
+        rect = self._section_img_rect(t, new_pos)
         ret = [t._crop(rect), None]
         self.scanned_sections.append(ret)
         return ret
+
+    def _section_img_rect(self, t, new_pos):
+        return t.surround((new_pos[0] - 50, new_pos[1]), 100, 30)
 
     def _detect_cls(self, t, pos_reward):
         area = (pos_reward[0] + 24, pos_reward[1] - 65, pos_reward[0] + 104, pos_reward[1] + 15)

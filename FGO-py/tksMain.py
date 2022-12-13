@@ -82,9 +82,9 @@ class TksMain:
         # TksCommon(self.config).scroll_and_click(IMG.TKS_FREE_DONE, A_INSTANCE_MENUS)
 
         assert fgoDevice.device.available
-        context = TksContext(self.config, 'sufftechni')
-        context.current_job = 'campaign_free'
-        TksBattleGroup(context)._handle_campaign_friend_options()
+        context = TksContext(self.config, 'extertena')
+        context.current_job = 'free_special'
+        self.run_free(context)
         # self.run_synthesis(context)
         # print(context.current_job[20])
         # self.run_free(context)
@@ -115,6 +115,7 @@ class TksMain:
         # for i in range(10):
         #     print(TksDetect().find(FRIEND_REISOUS['exp'], A_FRIEND_ICONS))
 
+        # cv2.imwrite(name:='tmpimg',xxx,[cv2.IMWRITE_PNG_COMPRESSION,9])
         # self.do_run()
 
     def do_run(self):

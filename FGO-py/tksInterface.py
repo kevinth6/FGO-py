@@ -130,7 +130,8 @@ class TksInterface:
             raise FlowException(f'Unable to find the section {section}')
 
     def go_free_instance(self, chapter, section, instance):
-        logger.info(f'Go to free instance: chapter {chapter}, section {section}, instance {instance}')
+        logger.info(
+            f'Go to free instance: chapter {chapter}, section {section}, instance {instance}')
         self.common.go_chapter(chapter)
 
         if section and (str(section) in INSTANCES[chapter]['sections']):
@@ -142,18 +143,29 @@ class TksInterface:
             schedule.sleep(.5)
         if instance:
             if instance in INSTANCES[chapter]['instances']:
-                self.common.scroll_and_click(INSTANCES[chapter]['instances'][instance], A_INSTANCE_MENUS, threshold=.01)
+                p = self.common.scroll_and_find(lambda t, i: t.find(INSTANCES[chapter]['instances'][instance],
+                                                                rect=A_INSTANCE_MENUS, threshold=.01))
             else:
-                raise AbandonException(f'Unable to find the instance {instance}')
+                raise AbandonException(
+                    f'Unable to find the instance {instance}')
         else:
-            self.common.scroll_and_click(IMG.TKS_FREE_DONE, A_INSTANCE_MENUS)
+            p = self.common.scroll_and_find(lambda t, i: t.find(IMG.TKS_FREE_DONE, A_INSTANCE_MENUS))
+
+        if p:
+            self.common.click(p, after_delay=.8)
+            return True
+        else:
+            logger.warning('No free instance found. ')
+            return False
 
     def run_free(self):
         cjc = self.context.cur_job_context()
         while True:
-            self.go_free_instance(cjc.chapter(), cjc.section(), cjc.instance())
-            if TksBattleGroup(self.context)():
-                self.common.back_to_top()
+            if self.go_free_instance(cjc.chapter(), cjc.section(), cjc.instance()):
+                if TksBattleGroup(self.context)():
+                    self.common.back_to_top()
+                else:
+                    break
             else:
                 break
 
@@ -187,14 +199,16 @@ class TksInterface:
             elif t.is_on_menu():
                 if after:
                     while p := TksDetect().find(IMG.TKS_TL_INTERLUDE, A_TL_BUTTONS):
-                        logger.info("After battle, in interlude section, go out")
+                        logger.info(
+                            "After battle, in interlude section, go out")
                         self.common.click(p, 1)
                     after = False
                 else:
                     i = 0
                     while i < 3:
                         if t.appear(IMG.TKS_TL_INTERLUDE, A_TL_BUTTONS):
-                            logger.info("In interlude section, select first instance in menu")
+                            logger.info(
+                                "In interlude section, select first instance in menu")
                             self.common.click(KEYMAP['8'], 3)
                             if self._enter_interlude():
                                 break
@@ -221,8 +235,8 @@ class TksInterface:
 
     def _enter_interlude(self):
         return TksDetect().appear(IMG.TKS_CHOOSE_FRIEND, A_TOP_RIGHT) \
-               or TksDetect.cache.appear(IMG.TKS_DIALOG_BEGIN, A_DIALOG_BUTTONS) \
-               or TksDetect.cache.isApEmpty()
+            or TksDetect.cache.appear(IMG.TKS_DIALOG_BEGIN, A_DIALOG_BUTTONS) \
+            or TksDetect.cache.isApEmpty()
 
     def run_rank_up(self):
         logger.info(f'Go rank up')
