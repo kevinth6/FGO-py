@@ -267,3 +267,11 @@ class TksJobContext:
     def turns(self):
         """turns config"""
         return safe_get(self.job_config, 'turns')
+
+    def use_pot(self):
+        """use the kp teapot"""
+        return safe_get(self.job_config, 'use_pot')
+
+    def force_turns(self):
+        """force the turn config to finish, not turn to xjbd if the turn > stage"""
+        return safe_get(self.job_config, 'force_turns')

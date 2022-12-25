@@ -56,7 +56,8 @@ class TksTurn(Turn):
         self.turns = None  # has to be set after constructor
 
     def __call__(self, turn):
-        if not self.turns or turn > len(self.turns) or turn > TksDetect(.2).getStage():
+        jc = self.context.cur_job_context()
+        if not self.turns or turn > len(self.turns) or (not jc.force_turns() and turn > TksDetect(.2).getStage()):
             super().__call__(turn)
         else:
             try:
@@ -166,6 +167,9 @@ class TksBattleGroup:
         logger.info('choose team ' + str(team_index))
         if TksDetect.cache.getTeamIndex() != team_index:
             fgoDevice.device.perform('\x70\x71\x72\x73\x74\x75\x76\x77\x78\x79'[team_index], (1000,))
+        if self.jc.use_pot() and TksDetect.cache.appear(IMG.TKS_POT_CLOSE, A_POT_BUTTONS):
+            self.common.click(P_POT_BTN, .8)
+
 
     def battle_completed(self):
         while True:

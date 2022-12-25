@@ -371,6 +371,7 @@ class TksCampaign:
             if t.appear(IMG.TKS_UNLIMITED_AVAILABLE, A_UNLIMITED_BUTTONS):
                 logger.info('retrieve 1 batch')
                 self.common.click(P_UNLIMITED_GET_MULTI)
+                count = 0
             elif t.appear(IMG.TKS_UNLIMITED_UNAVAILABLE, A_UNLIMITED_BUTTONS) \
                     or t.appear(IMG.TKS_UNLIMITED_UNAVAILABLE2, A_UNLIMITED_BUTTONS):
                 count += 1
@@ -380,6 +381,8 @@ class TksCampaign:
                     break
                 else:
                     self.common.click(P_UNLIMITED_GET_MULTI, after_delay=1)
+            elif p := self.common.find_dialog_close(t):
+                t.click(p, after_delay=.7)
             else:
                 fgoDevice.device.perform('\xBB', (800,))
 

@@ -63,6 +63,8 @@ class TksMain:
                 else:
                     self.common.click(P_TL_BUTTON, after_delay=.2)
                     fgoDevice.device.perform('\xBB', (200,))
+            except TimeoutException as ex:
+                raise ex
             except Exception as ex:
                 logger.error(ex, exc_info=True, stack_info=True)
             schedule.sleep(.5)
@@ -230,6 +232,4 @@ class TksMain:
     parser_tks_test = parser_tks_.add_parser('test', help=do_test.__doc__)
     parser_tks_run = parser_tks_.add_parser('run', help=do_run.__doc__)
 
-    complete_table = {
-        '': ['find', 'test', 'run']
-    }
+    complete_table = {'': ['find', 'test', 'run']}
