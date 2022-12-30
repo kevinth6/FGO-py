@@ -141,15 +141,19 @@ class TksInterface:
 
         while not TksDetect().is_on_menu():
             schedule.sleep(.5)
-        if instance:
-            if instance in INSTANCES[chapter]['instances']:
-                p = self.common.scroll_and_find(lambda t, i: t.find(INSTANCES[chapter]['instances'][instance],
-                                                                rect=A_INSTANCE_MENUS, threshold=.01))
+            
+        for i in range(3):
+            if instance:
+                if instance in INSTANCES[chapter]['instances']:
+                    p = self.common.scroll_and_find(lambda t, i: t.find(INSTANCES[chapter]['instances'][instance],
+                                                                    rect=A_INSTANCE_MENUS, threshold=.02))
+                else:
+                    raise AbandonException(
+                        f'Unable to find the instance {instance}')
             else:
-                raise AbandonException(
-                    f'Unable to find the instance {instance}')
-        else:
-            p = self.common.scroll_and_find(lambda t, i: t.find(IMG.TKS_FREE_DONE, A_INSTANCE_MENUS))
+                p = self.common.scroll_and_find(lambda t, i: t.find(IMG.TKS_FREE_DONE, A_INSTANCE_MENUS))
+            if p:
+                break
 
         if p:
             self.common.click(p, after_delay=.8)

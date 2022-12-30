@@ -169,7 +169,8 @@ class TksBattleGroup:
             fgoDevice.device.perform('\x70\x71\x72\x73\x74\x75\x76\x77\x78\x79'[team_index], (1000,))
         if self.jc.use_pot() and TksDetect.cache.appear(IMG.TKS_POT_CLOSE, A_POT_BUTTONS):
             self.common.click(P_POT_BTN, .8)
-
+        elif not self.jc.use_pot() and TksDetect.cache.appear(IMG.TKS_POT_OPEN, A_POT_BUTTONS):
+            self.common.click(P_POT_BTN, .8)
 
     def battle_completed(self):
         while True:

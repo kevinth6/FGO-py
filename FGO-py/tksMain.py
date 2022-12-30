@@ -12,6 +12,7 @@ from tksBattle import TksBattleGroup, TksBattle, TksTurn
 from fgoFuse import fuse, StuckException, TimeoutException
 from tksCampaign import TksCampaign
 from tksExpBall import TksExpBall
+from fgoSchedule import ScriptStop
 
 logger = getLogger('TksMain')
 
@@ -65,6 +66,8 @@ class TksMain:
                     fgoDevice.device.perform('\xBB', (200,))
             except TimeoutException as ex:
                 raise ex
+            except ScriptStop as ex:
+                raise ex
             except Exception as ex:
                 logger.error(ex, exc_info=True, stack_info=True)
             schedule.sleep(.5)
@@ -84,9 +87,13 @@ class TksMain:
         # TksCommon(self.config).scroll_and_click(IMG.TKS_FREE_DONE, A_INSTANCE_MENUS)
 
         assert fgoDevice.device.available
-        context = TksContext(self.config, 'extertena')
-        context.current_job = 'free_special'
+        context = TksContext(self.config, 'sufftechni')
+        context.current_job = 'run_dogfood'
         self.run_free(context)
+        # cjc = context.cur_job_context()
+        # for i in range(10):
+        #     TksCommon().back_to_top()
+        #     TksInterface(context).go_free_instance(cjc.chapter(), cjc.section(), 'qp4')
         # self.run_synthesis(context)
         # print(context.current_job[20])
         # self.run_free(context)
