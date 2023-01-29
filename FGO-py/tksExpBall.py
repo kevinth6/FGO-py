@@ -166,7 +166,7 @@ class TksExpBall:
             self.jc.synthesis_reisou_checked = True
 
         for i in range(3):
-            if pos := self._find_last_locked_reisou():
+            if pos := self._find_first_locked_reisou():
                 break
             schedule.sleep(2)
         if not pos:
@@ -338,6 +338,14 @@ class TksExpBall:
             self.common.click(P_TL_BUTTON, after_delay=1.5)
             return False
         return True
+
+    def _find_first_locked_reisou(self):
+        t = TksDetect()
+        for i, j in ((i, j) for i in range(4) for j in range(7)):
+            btn = B_SELECT_LOCK.offset(133 * j, 142 * i)
+            if t.appear_btn(btn):
+                return btn.center
+        return None
 
     def _find_last_locked_reisou(self):
         prev = None

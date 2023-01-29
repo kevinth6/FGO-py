@@ -292,7 +292,7 @@ class TksCampaign:
         for times in range(0, 3):
             fgoDevice.device.touch(self._clickable_pos_under_next(pos))
             schedule.sleep(.8)
-            if not TksDetect().appear(IMG.TKS_CAMPAIGN_NEXT, a, threshold=.1):
+            if not TksDetect().appear(IMG.TKS_CAMPAIGN_NEXT_HALF, a, threshold=.1):
                 return True
         return False
 

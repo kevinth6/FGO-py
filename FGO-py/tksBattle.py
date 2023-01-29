@@ -4,7 +4,7 @@ from fgoFuse import TimeoutException
 from fgoLogging import getLogger
 from tksDetect import *
 from tksCommon import FlowException, TksCommon, AbandonException
-from fgoKernel import Battle, Turn
+from fgoKernel import Battle, Turn, ScriptStop
 from tksContext import TksContext
 from fgoMetadata import servantData
 from fgoConst import KEYMAP
@@ -272,13 +272,19 @@ class TksBattleGroup:
             self.common.click(PS_FRIEND_CLASSES[self.jc.friend_class()], after_delay=1.5)
 
         has_friend = True
+        count = 0
         while True:
             t = TksDetect(.2, .3)
             if t.isNoFriend() or not has_friend:
                 self.common.wait(IMG.TKS_FRIEND_REFRESH, A_FRIEND_OPTIONS_BAR)
                 logger.info('Refresh friends.')
+                if self.jc.friend_class() and self.jc.friend_class() in PS_FRIEND_CLASSES:
+                    self.common.click(PS_FRIEND_CLASSES[self.jc.friend_class()], after_delay=1)
                 fgoDevice.device.perform('\xBAK', (800, 1000))
                 has_friend = True
+                count += 1
+                if count > 50:
+                    raise ScriptStop('Can refresh friends, stuck and exit.')
             else:
                 if p := self.common.scroll_and_find(self._friend_find_func(), end_pos=P_FRIEND_SCROLL_END,
                                                     top_pos=P_FRIEND_SCROLL_TOP):
@@ -301,7 +307,7 @@ class TksBattleGroup:
     def _find_by_reisou_and_name(self, t, i):
         ps = t.find_multiple(FRIEND_REISOUS[self.jc.friend_reisou()], A_FRIEND_ICONS)
         for p in ps:
-            rect = t.surround((p[0] + 412, p[1] - 50), 450, 44)
+            rect = t.surround((p[0] + 412, p[1] - 50), 450, 50)
             if t.find(FRIEND_SERVANTS[self.jc.friend_servant()], rect):
                 return p
 
@@ -310,6 +316,7 @@ class TksBattleGroup:
         t = TksDetect(.3, .3).cache
         if p := (t.find(IMG.TKS_FRIEND_OPTIONS, A_FRIEND_OPTIONS_BAR)
                  or t.find(IMG.TKS_FRIEND_OPTIONS_ON, A_FRIEND_OPTIONS_BAR)):
+            schedule.sleep(2)
             self.common.click_and_wait(p, IMG.TKS_DIALOG_DECIDE, A_DIALOG_BUTTONS)
         else:
             return
@@ -332,11 +339,11 @@ class TksBattleGroup:
             reisou_imgs = []
             func = lambda t: self._scan_reisou(t, reisou_imgs)
             self._friend_option_scroll(func)
+            logger.info(f'Found campaign imgs: {len(reisou_imgs)}')
             if idx >= len(reisou_imgs):
-                logger.warning(f'Unable to find the campaign reisou.')
-            else:
-                func = lambda t: self._enable_reisou(t, reisou_imgs[idx])
-                self._friend_option_scroll(func, True)
+                raise ScriptStop(f'Unable to find the campaign reisou.')
+            func = lambda t: self._enable_reisou(t, reisou_imgs[idx])
+            self._friend_option_scroll(func, True)
 
         TksDetect.cache.find_and_click(IMG.TKS_DIALOG_DECIDE, after_delay=.7)
 
@@ -352,17 +359,17 @@ class TksBattleGroup:
             schedule.sleep(0.3)
 
     def _disable_all_reisou(self, t):
-        ps = t.find_multiple(IMG.TKS_FRIEND_OPTION_SHOW, A_FRIEND_SHOW_BUTTONS)
+        ps = t.find_multiple(IMG.TKS_FRIEND_OPTION_SHOW, A_FRIEND_SHOW_BUTTONS, .08)
         for p in ps:
             t.click(p, after_delay=.5)
 
     def _scan_reisou(self, t, reisou_imgs):
-        ps = t.find_multiple(IMG.TKS_FRIEND_OPTION_HIDE, A_FRIEND_SHOW_BUTTONS)
+        ps = t.find_multiple(IMG.TKS_FRIEND_OPTION_HIDE, A_FRIEND_SHOW_BUTTONS, .08)
         for p in ps:
-            rect = t.surround((p[0] - 500, p[1]), 88, 44)
+            rect = t.surround((p[0] - 500, p[1] - 20), 88, 50)
             exist = False
             for img in reisou_imgs:
-                if t.appear(img, t.expand(rect, 2)):
+                if t.appear(img, t.expand(rect, 5), threshold=.03):
                     exist = True
                     break
             if not exist:

@@ -24,8 +24,8 @@ class TksCommon:
             schedule.sleep(interval)
         return self
 
-    def click_and_wait(self, pos, img, rect=(0, 0, 1280, 720), threshold=.05, interval=.5):
-        while True:
+    def click_and_wait(self, pos, img, rect=(0, 0, 1280, 720), threshold=.05, interval=.8):
+        for i in range(20):
             self.click(pos, after_delay=interval)
             if TksDetect().appear(img, rect, threshold):
                 break
@@ -34,7 +34,7 @@ class TksCommon:
     def wait_btn(self, button, interval=.5):
         return self.wait(button.img, button.rect, button.threshold, interval)
 
-    def wait_and_click(self, img, rect=(0, 0, 1280, 720), threshold=.05, after_delay=.5, interval=.5):
+    def wait_and_click(self, img, rect=(0, 0, 1280, 720), threshold=.05, after_delay=.5, interval=.8):
         while not (p := TksDetect().find(img, rect, threshold)):
             schedule.sleep(interval)
 
@@ -175,11 +175,18 @@ class TksCommon:
             schedule.sleep(interval)
         return self
 
-    def click_and_wait_for_menu_view(self, pos, move_step=None, interval=.7, max_times=5):
+    def click_and_wait_for_menu_view(self, pos, move_step=None, interval=1, max_times=5):
         for i in range(max_times):
             self.click(pos, interval)
-            if TksDetect().is_on_menu() and TksDetect.cache.appear(IMG.LISTBAR, A_LIST_BAR):
-                return pos
+            if TksDetect().is_on_menu():
+                t = TksDetect.cache
+                if t.appear(IMG.TKS_CAMPAIGN_REWARD_BTN, A_TOP_RIGHT) \
+                    and t.appear(IMG.LISTBAR, A_LIST_BAR):
+                    return pos
+                else:
+                    logger.warn('Unexcpected menu. exit')
+                    t.click(P_TL_BUTTON, after_delay=.7)
+                    return None
             if move_step:
                 pos = (pos[0] + move_step[0], pos[1] + move_step[1])
         return None

@@ -65,11 +65,11 @@ class TksMain:
                     self.common.click(P_TL_BUTTON, after_delay=.2)
                     fgoDevice.device.perform('\xBB', (200,))
             except TimeoutException as ex:
-                raise ex
+                self._exit_exception(ex)
             except ScriptStop as ex:
-                raise ex
+                self._exit_exception(ex)
             except Exception as ex:
-                logger.error(ex, exc_info=True, stack_info=True)
+                self._report_exception(ex)
             schedule.sleep(.5)
 
     def do_find(self):
@@ -87,9 +87,12 @@ class TksMain:
         # TksCommon(self.config).scroll_and_click(IMG.TKS_FREE_DONE, A_INSTANCE_MENUS)
 
         assert fgoDevice.device.available
-        context = TksContext(self.config, 'sufftechni')
-        context.current_job = 'run_dogfood'
-        self.run_free(context)
+        context = TksContext(self.config, 'unlikscarf')
+        context.current_job = 'campaign_free'
+        # TksCommon().back_to_top()
+        # TksCampaign(context).run_free()
+        TksBattleGroup(context)._handle_campaign_friend_options()
+        
         # cjc = context.cur_job_context()
         # for i in range(10):
         #     TksCommon().back_to_top()
@@ -129,8 +132,12 @@ class TksMain:
 
     def do_run(self):
         """main run entry"""
+        arr = self.config['accounts']
+        if random.randint(0,1) == 1:
+            arr = arr[: :-1]
+            logger.info(f'account order reverse. {arr}')
         self._cleanup()
-        for account in self.config['accounts']:
+        for account in arr:
             logger.info("run for account " + account)
             context = TksContext(self.config, account)
             times = 0
@@ -177,6 +184,8 @@ class TksMain:
                         logger.error('Abandon this job, continue next')
                         self._cleanup()
                         break
+                    except ScriptStop as ex:
+                        self._exit_exception(ex)
                 if times >= 3:
                     logger.error('Exception times exceed 3. Abandon this job, continue next')
 
@@ -187,6 +196,14 @@ class TksMain:
         logger.error(ex, exc_info=True, stack_info=True)
         if TksDetect.cache:
             TksDetect.cache.save('fgoLog/Exception')
+
+    def _exit_exception(self, ex):
+        if TksDetect.cache:
+            TksDetect.cache.save('fgoLog/Exception')
+        fuse.save()
+        file = open(self.config['exception_file'],'w')
+        file.close()
+        raise ex
 
     def run_free(self, context):
         self.common.back_to_top()

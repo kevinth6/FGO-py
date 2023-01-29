@@ -37,7 +37,7 @@ class TksInterface:
                     or t.appear(IMG.TKS_DIALOG_FORWARD, A_FULL_DIALOG_CONFIRM):
                 break
             else:
-                t.device.perform('Z', (500,))
+                t.device.perform('\xBB', (500,))
         schedule.sleep(1)
 
     def _select_account(self, account, max_swipe):
@@ -53,7 +53,23 @@ class TksInterface:
             raise FlowException("Can find the account " + account)
 
         TksDetect().find_and_click(IMG.TKS_LOGIN, A_LOGIN_BOX, retry=3)
+        self._select_region(self.context.config['account_regions'][account])
         self._wait_for_game_enter()
+    
+    def _select_region(self, region):
+        logger.info(f'Select region {region}')
+        self.common.wait_and_click(IMG.TKS_REGION_SELECT, A_BR_BUTTONS) \
+            .wait(IMG.TKS_REGION_IOS, A_DIALOG_BUTTONS)
+        ret = False
+        if region == 'ios':
+            ret = TksDetect.cache.find_and_click(IMG.TKS_REGION_IOS, A_DIALOG_BUTTONS)
+        elif region == 'android':
+            ret = TksDetect.cache.find_and_click(IMG.TKS_REGION_ANDROID, A_DIALOG_BUTTONS)
+        else:
+            raise AbandonException('Invalid region! ')
+
+        if not ret:
+            raise AbandonException('Fail to select region! ')
 
     def switch_to_account(self, account):
         logger.info('Switch to account ' + account)
@@ -146,7 +162,7 @@ class TksInterface:
             if instance:
                 if instance in INSTANCES[chapter]['instances']:
                     p = self.common.scroll_and_find(lambda t, i: t.find(INSTANCES[chapter]['instances'][instance],
-                                                                    rect=A_INSTANCE_MENUS, threshold=.02))
+                                                                    rect=A_INSTANCE_MENUS, threshold=.015))
                 else:
                     raise AbandonException(
                         f'Unable to find the instance {instance}')
