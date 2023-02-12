@@ -22,7 +22,7 @@ class Fuse:
         if self.value>self.max:
             self.fuse_time += 1
             self.save()
-            if self.fuse_time > MAX_FUSE_TIME:
+            if self.fuse_time >= MAX_FUSE_TIME:
                 raise ScriptStop('Fused')
             else:
                 self.value = 0

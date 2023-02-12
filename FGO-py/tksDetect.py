@@ -177,7 +177,7 @@ class TksDetect(XDetect):
         return self.appear_btn(B_MAIN_TL_CLOSE)
 
     def is_on_campaign_shop(self):
-        return self.appear(IMG.TKS_CAMPAIGN_SHOP_OFF, A_CAMPAIGN_REWARD_TABS, threshold=.0) \
+        return self.appear(IMG.TKS_CAMPAIGN_SHOP_OFF, A_CAMPAIGN_REWARD_TABS, threshold=.02) \
                or self.appear(IMG.TKS_CAMPAIGN_SHOP_ON, A_CAMPAIGN_REWARD_TABS, threshold=.02) \
 
     def is_list_end(self, pos):

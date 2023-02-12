@@ -69,10 +69,9 @@ def main():
             time.sleep(5)
 
         cur = time.time()
-        if os.path.exists(daemonConf['exception_file']):
-            log(f'Found exception file. recover from last failure.')
+        if os.path.exists(daemonConf['stat_file']):
+            log(f'Found stat file. recover from last stat.')
             last_run_time = cur - run_interval - 100
-            os.remove(daemonConf['exception_file'])
 
         if not last_run_time or cur - last_run_time > run_interval:
             if script_pid:

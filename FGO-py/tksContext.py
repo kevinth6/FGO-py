@@ -5,8 +5,15 @@ from tksCommon import FlowException
 def safe_get(dict, name):
     return dict[name] if name in dict else None
 
+def load_stat(config):
+    if os.path.exists(config['stat_file']):
+        with open(config['stat_file'], "r", encoding="utf-8") as f:
+            stat = json.load(f)
+            return (stat['account'], stat['apple_used'])
+    return (None, None)
 
 class TksContext:
+
     def __init__(self, config, account):
         self.config = config
         self.account = account
@@ -16,6 +23,7 @@ class TksContext:
         self._setup_job_contexts()
         self.current_job = None
         self.battle_options_checked = False
+        self.apple_used = 0
 
     def _setup_presets(self, config, account):
         self.presets = {}
@@ -66,15 +74,23 @@ class TksContext:
         if self.current_job and self.current_job in self.job_configs:
             return self.job_configs[self.current_job]
         else:
-            raise FlowException("Can't get current job config, account: " + self.account + ", job: "
-                                + self.current_job)
+            raise FlowException("Can't get current job config, account: " + self.account + ", job: " + self.current_job)
 
     def cur_job_context(self):
         if self.current_job and self.current_job in self.job_contexts:
             return self.job_contexts[self.current_job]
         else:
-            raise FlowException("Can't get current job context, account: " + self.account + ", job: "
-                                + self.current_job)
+            raise FlowException("Can't get current job context, account: " + self.account + ", job: " +
+                                self.current_job)
+
+    def apple_kind(self):
+        return safe_get(self.config, 'apple_kind')
+
+    def apples(self):
+        return safe_get(self.config['account_apples'], self.account)
+
+    def apple_remaining(self):
+        return self.apples() and self.apple_used < self.apples()
 
     def save(self, path='tksResult'):
         save_path = f"{path}/{self.account}"
@@ -85,6 +101,10 @@ class TksContext:
         with open(name, "w") as f:
             json.dump(self.out(), f, indent=4)
 
+    def save_stat(self):
+        with open(self.config['stat_file'], "w") as f:
+            json.dump(self.out_stat(), f, indent=4)
+
     def out(self):
         total_comp = TksContext.sum_in_obj_dict(self.job_contexts, 'battle_completed')
         total_fail = TksContext.sum_in_obj_dict(self.job_contexts, 'battle_failed')
@@ -94,11 +114,21 @@ class TksContext:
         ret['end_time'] = time.strftime(f'%Y-%m-%d_%H.%M.%S.{round(self.start_time * 1000) % 1000:03}')
         ret['battle_completed'] = total_comp
         ret['battle_failed'] = total_fail
+        ret['apple_used'] = self.apple_used
         ret['jobs'] = collections.OrderedDict()
         for jck in self.job_contexts:
             ret['jobs'][jck] = self.job_contexts[jck].out()
 
         return ret
+
+    def out_stat(self):
+        ret = collections.OrderedDict()
+        ret['account'] = self.account
+        ret['apple_used'] = self.apple_used
+        return ret
+    
+    def remove_stat(self):
+        os.remove(self.config['stat_file'])
 
     @staticmethod
     def anonymous_context():
@@ -124,9 +154,9 @@ class TksContext:
 
 
 class TksJobContext:
+
     def __init__(self, job_config):
         self.job_config = job_config
-        self.apple_used = 0
         self.battle_completed = 0
         self.battle_failed = 0
         self.total_turns = 0
@@ -149,7 +179,6 @@ class TksJobContext:
         ret["config"] = self.job_config
         ret["battle_completed"] = self.battle_completed
         ret["battle_failed"] = self.battle_failed
-        ret["apple_used"] = self.apple_used
         ret["total_turns"] = self.total_turns
         ret["total_time"] = self.total_time
         ret["avg_turns"] = TksContext.avg(self.total_turns, self.battle_completed + self.battle_failed)
@@ -162,20 +191,9 @@ class TksJobContext:
     def type(self):
         return safe_get(self.job_config, 'type')
 
-    def apple_remaining(self):
-        return self.apples() and self.apple_used < self.apples()
-
     def timeout(self):
         """timeout setting"""
         return safe_get(self.job_config, 'timeout')
-
-    def apples(self):
-        """apple to eat in battle"""
-        return safe_get(self.job_config, 'apples')
-
-    def apple_kind(self):
-        """kind of the apple, gold by default"""
-        return safe_get(self.job_config, 'apple_kind')
 
     def team_index(self):
         """specify the team index in any battle, the highest priority"""

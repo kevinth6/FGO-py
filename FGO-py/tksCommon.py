@@ -98,6 +98,10 @@ class TksCommon:
                 schedule.sleep(.8)
                 self.scroll_and_click(INSTANCES[chapter]['menus'][str(i)], A_SUB_MENUS,
                                       scroll_area=A_SWIPE_RIGHT_DOWN_LOW)
+                schedule.sleep(1)
+                if p := self.find_dialog_close(TksDetect()):
+                    self.click(p)
+                    raise AbandonException('Unexpected dialog during menus ')
             else:
                 break
 
@@ -171,7 +175,7 @@ class TksCommon:
         return self
 
     def wait_for_submenu(self, interval=.5):
-        while not TksDetect.cache.appear(IMG.LISTBAR, A_LIST_BAR):
+        while not TksDetect().appear(IMG.LISTBAR, A_LIST_BAR):
             schedule.sleep(interval)
         return self
 
@@ -215,17 +219,17 @@ class TksCommon:
             return False
 
     def eat_apple(self, context):
-        cjc = context.cur_job_context()
-        if not cjc.apple_remaining():
+        if not context.apple_remaining():
             logger.info('No apple remaining.')
             fgoDevice.device.press('Z')
             return False
-        cjc.apple_used += 1
-        logger.info('Eating an apple. Used ' + str(cjc.apple_used))
-        apple_kind = cjc.apple_kind() or 0
+        context.apple_used += 1
+        logger.info('Eating an apple. Used ' + str(context.apple_used))
+        apple_kind = context.apple_kind() or 0
         fgoDevice.device.perform('W4K8'[apple_kind] + 'L', (1000, 2000))
         while TksDetect(.5, .5).isApEmpty():
             pass
+        context.save_stat()
         # for i in set('W4K')-{'W4K8'[self.appleKind]}:
         #     if not Detect().isApEmpty():break
         #     fgoDevice.device.perform(i+'L',(600,1200))

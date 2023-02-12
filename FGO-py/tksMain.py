@@ -7,7 +7,7 @@ import fgoDevice, fgoSchedule
 from fgoDetect import Detect, IMG
 from tksCommon import TksCommon, FlowException, AbandonException
 from tksInterface import TksInterface
-from tksContext import TksContext, TksJobContext
+from tksContext import TksContext, load_stat
 from tksBattle import TksBattleGroup, TksBattle, TksTurn
 from fgoFuse import fuse, StuckException, TimeoutException
 from tksCampaign import TksCampaign
@@ -64,13 +64,13 @@ class TksMain:
                 else:
                     self.common.click(P_TL_BUTTON, after_delay=.2)
                     fgoDevice.device.perform('\xBB', (200,))
-            except TimeoutException as ex:
-                self._exit_exception(ex)
-            except ScriptStop as ex:
-                self._exit_exception(ex)
+            # except TimeoutException as ex:
+            #     self._exit_exception(ex)
+            # except ScriptStop as ex:
+            #     self._exit_exception(ex)
             except Exception as ex:
-                self._report_exception(ex)
-            schedule.sleep(.5)
+                self._exit_exception(ex)
+            schedule.sleep(.3)
 
     def do_find(self):
         """find IMG from screen and print the location to console"""
@@ -87,11 +87,11 @@ class TksMain:
         # TksCommon(self.config).scroll_and_click(IMG.TKS_FREE_DONE, A_INSTANCE_MENUS)
 
         assert fgoDevice.device.available
-        context = TksContext(self.config, 'unlikscarf')
-        context.current_job = 'campaign_free'
+        context = TksContext(self.config, 'plawast')
+        # context.current_job = 'any_rank_up'
         # TksCommon().back_to_top()
         # TksCampaign(context).run_free()
-        TksBattleGroup(context)._handle_campaign_friend_options()
+        context.save_stat()
         
         # cjc = context.cur_job_context()
         # for i in range(10):
@@ -132,14 +132,19 @@ class TksMain:
 
     def do_run(self):
         """main run entry"""
-        arr = self.config['accounts']
-        if random.randint(0,1) == 1:
-            arr = arr[: :-1]
-            logger.info(f'account order reverse. {arr}')
         self._cleanup()
-        for account in arr:
+        (last_account, last_apple) = load_stat(self.config)
+        check_last = True
+        for account in self.config['accounts']:
+            if check_last and last_account and account != last_account:
+                logger.info(f"last account {last_account}, skip this account {account}")
+                continue
+            check_last = False
             logger.info("run for account " + account)
             context = TksContext(self.config, account)
+            if last_apple:
+                context.apple_used = last_apple
+            context.save_stat()
             times = 0
             while times < 3:
                 try:
@@ -174,12 +179,12 @@ class TksMain:
                         getattr(self, f'run_{jc.type()}')(context)
                         logger.info("Finish running job " + job_name)
                         break
-                    except (StuckException, TimeoutException, FlowException) as ex:
+                    except (StuckException, FlowException) as ex:
                         self._report_exception(ex)
                         logger.info('Cleanup and continue')
                         self._cleanup()
                         times += 1
-                    except AbandonException as ex:
+                    except (AbandonException, TimeoutException) as ex:
                         self._report_exception(ex)
                         logger.error('Abandon this job, continue next')
                         self._cleanup()
@@ -190,6 +195,7 @@ class TksMain:
                     logger.error('Exception times exceed 3. Abandon this job, continue next')
 
             context.save()
+            context.remove_stat()
             logger.info("Finish running account " + account)
 
     def _report_exception(self, ex):
