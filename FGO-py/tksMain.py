@@ -85,13 +85,14 @@ class TksMain:
         # TksInterface(context).go_free_instance('campaign_20221103', '90', None)
         # TksBattleGroup(context)()
         # TksCommon(self.config).scroll_and_click(IMG.TKS_FREE_DONE, A_INSTANCE_MENUS)
-
         assert fgoDevice.device.available
-        context = TksContext(self.config, 'plawast')
+        context = TksContext(self.config, 'tulkasful')
+        context.current_job = 'any_rank_up'
+        self.run_rank_up(context)
         # context.current_job = 'any_rank_up'
         # TksCommon().back_to_top()
         # TksCampaign(context).run_free()
-        context.save_stat()
+        # context.save_stat()
         
         # cjc = context.cur_job_context()
         # for i in range(10):
@@ -207,8 +208,6 @@ class TksMain:
         if TksDetect.cache:
             TksDetect.cache.save('fgoLog/Exception')
         fuse.save()
-        file = open(self.config['exception_file'],'w')
-        file.close()
         raise ex
 
     def run_free(self, context):

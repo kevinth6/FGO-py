@@ -179,7 +179,9 @@ class TksCampaign:
         self._go_campaign()
         while True:
             t = TksDetect(.3, .5)
-            if t.is_on_campaign_shop():
+            if p := self.common.find_dialog_close(t):
+                t.click(p, after_delay=.7)
+            elif t.is_on_campaign_shop():
                 self._handle_unlimited_reward()
                 schedule.sleep(1)
                 self._retrieve_dog_food()
@@ -191,8 +193,6 @@ class TksCampaign:
                     break
             elif t.is_on_top():
                 break
-            elif p := self.common.find_dialog_close(t):
-                t.click(p, after_delay=.7)
             else:
                 fgoDevice.device.perform('\xBB', (800,))
 
@@ -368,7 +368,8 @@ class TksCampaign:
         count = 0
         while True:
             t = TksDetect(.2, .5)
-            if t.appear(IMG.TKS_UNLIMITED_AVAILABLE, A_UNLIMITED_BUTTONS):
+            if t.appear(IMG.TKS_UNLIMITED_AVAILABLE, A_UNLIMITED_BUTTONS) \
+                    or t.appear(IMG.TKS_UNLIMITED_AVAILABLE2, A_UNLIMITED_BUTTONS):
                 logger.info('retrieve 1 batch')
                 self.common.click(P_UNLIMITED_GET_MULTI)
                 count = 0
@@ -384,19 +385,21 @@ class TksCampaign:
             elif p := self.common.find_dialog_close(t):
                 t.click(p, after_delay=.7)
             else:
-                fgoDevice.device.perform('\xBB', (800,))
+                self.common.click(P_UNLIMITED_GET_ONE, after_delay=.8)
 
     def _retrieve_dog_food(self):
         self.common.back_to_top() \
             .click(P_GIFT_BTN_ON_TOP, after_delay=2) \
             .click(P_GIFT_SCROLL_TOP) \
-            .scroll_and_find(self._retrieve_dog_food_batch, end_pos=P_GIFT_SCROLL_END, top_pos=P_GIFT_SCROLL_TOP,
+            .scroll_and_find(self._retrieve_dog_food_batch, end_pos=P_GIFT_SCROLL_END, top_pos=P_GIFT_SCROLL_TOP, max_swipe=5, 
                              scroll_area=A_SWIPE_CENTER_DOWN)
 
     def _retrieve_dog_food_batch(self, t, i):
         while True:
             t = TksDetect(.2, .3)
-            if p := t.find(IMG.TKS_GIFT_DOG_FOOD_4, A_GIFT_ICONS):
+            if p := self.common.find_dialog_close(t):
+                t.click(p, after_delay=.7)
+            elif p := t.find(IMG.TKS_GIFT_DOG_FOOD_4, A_GIFT_ICONS):
                 self.common.click(p)
             elif p := t.find(IMG.TKS_GIFT_DOG_FOOD_3, A_GIFT_ICONS):
                 self.common.click(p)
@@ -436,7 +439,7 @@ class TksCampaign:
         return ret
 
     def _find_free_instance(self, t, img, map_screen, map_pos, menu_scroll, map_img, level, first=False):
-        for mp in t.find_multiple(img, A_CAMPAIGN_INSTANCE_REWARD):
+        for mp in t.find_multiple(img, A_CAMPAIGN_INSTANCE_REWARD, threshold=0.03):
             cls = self._detect_cls(t, mp)
             if self._instance_scanned(t, mp, level, cls):
                 logger.info(f'Instance already scanned. level: {level}, scroll: {menu_scroll}, pos:{mp}')

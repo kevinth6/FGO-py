@@ -36,7 +36,9 @@ class TksExpBall:
             else:
                 logger.info('burning disabled.')
             self.synthesis_servant()
-            self.synthesis_reisou()
+            num = 0
+            while not self.synthesis_reisou(num):
+                num+=1
             self.synthesis_count += 1
             logger.info(f'Finished synthesis {self.synthesis_count}')
             self.common.back_to_top()
@@ -153,7 +155,7 @@ class TksExpBall:
                 self.common.click(P_SYNTHESIS_ENTER) \
                     .wait(B_SELECT_FINISH.img, A_BR_BUTTONS)
 
-    def synthesis_reisou(self):
+    def synthesis_reisou(self, num):
         logger.info('Synthesis reisou Start.')
         self.common.back_to_top() \
             .go_menu(P_MAIN_SYNTHESIS) \
@@ -166,7 +168,11 @@ class TksExpBall:
             self.jc.synthesis_reisou_checked = True
 
         for i in range(3):
-            if pos := self._find_first_locked_reisou():
+            if num > 0 or random.randint(0,1) == 1:
+                pos = self._find_first_locked_reisou()
+            else:
+                pos = self._find_last_locked_reisou()
+            if pos:
                 break
             schedule.sleep(2)
         if not pos:
@@ -184,10 +190,10 @@ class TksExpBall:
 
         while True:
             if not self._select_food_and_synthesis():
-                break
+                return True
             if TksDetect().appear_btn(B_SYNTHESIS_LOAD):
                 logger.warning('ExpBall Created')
-                break
+                return False
             self.common.click(P_SYNTHESIS_ENTER) \
                 .wait_btn(B_SELECT_FINISH)
 

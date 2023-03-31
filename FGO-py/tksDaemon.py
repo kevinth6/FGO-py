@@ -69,11 +69,12 @@ def main():
             time.sleep(5)
 
         cur = time.time()
+        exception = False
         if os.path.exists(daemonConf['stat_file']):
             log(f'Found stat file. recover from last stat.')
-            last_run_time = cur - run_interval - 100
+            exception = True
 
-        if not last_run_time or cur - last_run_time > run_interval:
+        if not last_run_time or cur - last_run_time > run_interval or exception:
             if script_pid:
                 log('Already running. skip launch.')
             else:
@@ -82,9 +83,10 @@ def main():
                 subprocess.Popen(game_proc_path)
                 time.sleep(30)
                 run_script()
-                last_run_time = time.time()
+                if not exception or not last_run_time:
+                    last_run_time = time.time()
                 time_str = time.strftime(f"%Y-%m-%d_%H:%M:%S:{round(last_run_time * 1000) % 1000:03}")
-                log(f'Finished launch. run time: {time_str}')
+                log(f'Finished launch. last run time: {time_str}')
         else:
             log(f'Idle. Launch after {run_interval - (cur - last_run_time):<.2f} seconds')
 

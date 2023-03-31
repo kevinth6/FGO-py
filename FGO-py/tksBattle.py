@@ -359,17 +359,17 @@ class TksBattleGroup:
             schedule.sleep(0.3)
 
     def _disable_all_reisou(self, t):
-        ps = t.find_multiple(IMG.TKS_FRIEND_OPTION_SHOW, A_FRIEND_SHOW_BUTTONS, .08)
+        ps = t.find_multiple(IMG.TKS_FRIEND_OPTION_SHOW, A_FRIEND_SHOW_BUTTONS, .06)
         for p in ps:
             t.click(p, after_delay=.5)
 
     def _scan_reisou(self, t, reisou_imgs):
-        ps = t.find_multiple(IMG.TKS_FRIEND_OPTION_HIDE, A_FRIEND_SHOW_BUTTONS, .08)
+        ps = t.find_multiple(IMG.TKS_FRIEND_OPTION_HIDE, A_FRIEND_SHOW_BUTTONS, .06)
         for p in ps:
             rect = t.surround((p[0] - 500, p[1] - 20), 88, 50)
             exist = False
             for img in reisou_imgs:
-                if t.appear(img, t.expand(rect, 5), threshold=.03):
+                if t.appear(img, t.expand(rect, 5), threshold=.05):
                     exist = True
                     break
             if not exist:

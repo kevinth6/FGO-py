@@ -134,7 +134,7 @@ class TksCommon:
                 or t.find(IMG.APEMPTY, A_DIALOG_BUTTONS):
             logger.info("Dialog found with close button")
             return p
-        elif p := t.find(IMG.TKS_CANCEL, A_DIALOG_BUTTONS):
+        elif p := (t.find(IMG.TKS_CANCEL, A_DIALOG_BUTTONS) or t.find(IMG.TKS_CANCEL2, A_DIALOG_BUTTONS)):
             logger.info("Dialog found with cancel button")
             return p
         elif p := t.find(IMG.TKS_EXIT, A_DIALOG_BUTTONS):
@@ -269,7 +269,7 @@ class TksCommon:
             logger.info("Campaign have no map, skip the map locating")
             p = True
         else:
-            if p := self.swipe_on_map_and_do(lambda t, st: t.find(map_img, threshold=.1)):
+            if p := self.swipe_on_map_and_do(lambda t, st: t.find(map_img, threshold=.05)):
                 p = self.click_and_wait_for_menu_view(p)
 
             if not p:
@@ -281,7 +281,7 @@ class TksCommon:
                 p = self.click_and_wait_for_menu_view(map_pos)
 
         if p:
-            if not (p := self.scroll_and_find(lambda t, i: t.find(menu_img, A_INSTANCE_TITLE, threshold=.02))):
+            if not (p := self.scroll_and_find(lambda t, i: t.find(menu_img, A_INSTANCE_TITLE, threshold=.005))):
                 logger.info(f'find menu location by scroll {menu_scroll} and pos {menu_pos}')
                 self.click(P_SCROLL_TOP, after_delay=.8)
                 for i in range(menu_scroll):
