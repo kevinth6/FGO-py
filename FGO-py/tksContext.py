@@ -27,7 +27,7 @@ class TksContext:
 
     def _setup_presets(self, config, account):
         self.presets = {}
-        if 'presets' in config:
+        if ('presets' in config) and config['presets']:
             for preset_key in config['presets']:
                 self.presets[preset_key] = copy.deepcopy(config['presets'][preset_key])
 
@@ -269,10 +269,14 @@ class TksJobContext:
         """disable the servant and command code burning in exp_ball, this will cause the servant position quick filled up.
         should only be used when you need more low star servants to maximum Hogu"""
         return safe_get(self.job_config, 'disable_burning')
+    
+    def exp_only(self):
+        """exp_ball go to the exp_only mode, will by defaul sell all un relavant fou and resiou"""
+        return safe_get(self.job_config, 'exp_only')
 
-    def reisou_food_max_star(self):
-        """max stars when selecting reisou food for reisou synthesis"""
-        return safe_get(self.job_config, 'reisou_food_max_star')
+    def reisou_burn_min_star(self):
+        """max stars when selecting reisous to burn"""
+        return safe_get(self.job_config, 'reisou_burn_min_star')
 
     def code_burn_max_star(self):
         """max stars when selecting command code to burn"""
@@ -293,3 +297,7 @@ class TksJobContext:
     def force_turns(self):
         """force the turn config to finish, not turn to xjbd if the turn > stage"""
         return safe_get(self.job_config, 'force_turns')
+    
+    def second_pos(self):
+        """second position in the chapter menu"""
+        return safe_get(self.job_config, 'second_pos')

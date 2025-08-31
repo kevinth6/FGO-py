@@ -45,10 +45,10 @@ class TksInterface:
         TksDetect.cache.find_and_click(IMG.TKS_LOGIN_DROPDOWN, A_LOGIN_BOX)
 
         for i in range(max_swipe):
-            if s := TksDetect().find_and_click(ACCOUNTS[account], A_LOGIN_BOX, threshold=.03):
+            if s := TksDetect().find_and_click(ACCOUNTS[account], A_LOGIN_BOX, threshold=.02):
                 break
-            fgoDevice.device.swipe((625, 420, 625, 370))
-            schedule.sleep(0.3)
+            fgoDevice.device.swipe((625, 420, 625, 395))
+            schedule.sleep(0.8)
         if not s:
             raise FlowException("Can find the account " + account)
 
@@ -162,7 +162,7 @@ class TksInterface:
             if instance:
                 if instance in INSTANCES[chapter]['instances']:
                     p = self.common.scroll_and_find(lambda t, i: t.find(INSTANCES[chapter]['instances'][instance],
-                                                                    rect=A_INSTANCE_MENUS, threshold=.015))
+                                                                    rect=A_INSTANCE_MENUS, threshold=.02), max_swipe=80)
                 else:
                     raise AbandonException(
                         f'Unable to find the instance {instance}')

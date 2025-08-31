@@ -22,6 +22,8 @@ Screenshot.png
 Log*.txt
 fgoConfig.json
 tksConfig.yaml
+tks2Config.yaml
+tks2.py
 tksDaemon.yaml
 **/accounts/*.png
 tksResult/

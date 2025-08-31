@@ -252,7 +252,7 @@ class TksCommon:
         return None
 
     def _pinch_and_swipe_down(self):
-        schedule.sleep(1)
+        schedule.sleep(3)
         fgoDevice.device.pinch()
         schedule.sleep(1)
         TksDetect().find_and_click_btn(B_MAIN_TL_CLOSE, after_delay=1)
@@ -281,14 +281,14 @@ class TksCommon:
                 p = self.click_and_wait_for_menu_view(map_pos)
 
         if p:
-            if not (p := self.scroll_and_find(lambda t, i: t.find(menu_img, A_INSTANCE_TITLE, threshold=.005))):
+            if not (p := self.scroll_and_find(lambda t, i: t.find(menu_img, A_INSTANCE_TITLE, threshold=.03))):
                 logger.info(f'find menu location by scroll {menu_scroll} and pos {menu_pos}')
                 self.click(P_SCROLL_TOP, after_delay=.8)
                 for i in range(menu_scroll):
                     fgoDevice.device.swipe(A_SWIPE_RIGHT_DOWN)
                     schedule.sleep(.5)
                 p = menu_pos
-            self.click(p, after_delay=.7)
+            self.click((p[0] - 100, p[1]), after_delay=.7)
             return True
         else:
             logger.warning(f"Can't open section menu")

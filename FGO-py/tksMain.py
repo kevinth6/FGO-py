@@ -37,14 +37,13 @@ class TksMain:
                 if t.isTurnBegin():
                     logger.info('In battle, complete battle first')
                     TksBattleGroup(TksContext.anonymous_context(), run_once=True)()
-                elif p := t.find(IMG.TKS_APP_ICON):
-                    logger.info('Game closed, reopen')
-                    t.click(p)
                 elif t.appear(IMG.TKS_CONTRACT, A_CONTRACT_TITLE, threshold=.02):
                     logger.info('Click contract agree')
                     t.click(P_CONTRACT_AGREE)
                 elif t.find_and_click(IMG.TKS_LOGIN, A_LOGIN_BOX, threshold=.02):
                     logger.info('Click login')
+                elif t.find_and_click(IMG.TKS_REFRESH, A_LOGIN_BOX, threshold=.02):
+                    logger.info('Click refresh')
                 elif t.find_and_click(IMG.TKS_NOT_CONTINUE, A_DIALOG_BUTTONS):
                     logger.info('Click not continue')
                 elif t.find_and_click(IMG.TKS_INTERRUPTED_BATTLE_ENTER, A_DIALOG_BUTTONS):
@@ -59,6 +58,9 @@ class TksMain:
                     break
                 elif p := self.common.find_dialog_close(t):
                     t.click(p, after_delay=1)
+                elif p := t.find(IMG.TKS_APP_ICON):
+                    logger.info('Game closed, reopen')
+                    t.click(p)
                 elif self.common.skip_possible_story():
                     pass
                 else:
@@ -86,9 +88,15 @@ class TksMain:
         # TksBattleGroup(context)()
         # TksCommon(self.config).scroll_and_click(IMG.TKS_FREE_DONE, A_INSTANCE_MENUS)
         assert fgoDevice.device.available
-        context = TksContext(self.config, 'tulkasful')
-        context.current_job = 'any_rank_up'
-        self.run_rank_up(context)
+        context = TksContext(self.config, 'tulkasmstr')
+        context.current_job = 'run_material'
+        self.run_free(context)
+        # self.run_exp_ball(context)
+        # g = TksBattleGroup(context, run_once=True)
+        # g.jc.campaign_friend_checked = True
+        # g.choose_friend()
+        # g.choose_friend()
+        
         # context.current_job = 'any_rank_up'
         # TksCommon().back_to_top()
         # TksCampaign(context).run_free()
@@ -143,7 +151,7 @@ class TksMain:
             check_last = False
             logger.info("run for account " + account)
             context = TksContext(self.config, account)
-            if last_apple:
+            if last_apple and account == last_account:
                 context.apple_used = last_apple
             context.save_stat()
             times = 0
@@ -229,6 +237,7 @@ class TksMain:
     def run_campaign_unlimited_reward(self, context):
         self.common.back_to_top()
         TksCampaign(context).retrieve_unlimited_reward()
+        TksCampaign(context).retrieve_dog_food()
         TksExpBall(context).synthesis_servant()
 
     def run_exp_ball(self, context):
@@ -237,10 +246,9 @@ class TksMain:
 
     def run_synthesis(self, context):
         exp_ball = TksExpBall(context)
-        if not context.cur_job_context().disable_burning():
-            exp_ball.burning()
-        exp_ball.synthesis_servant()
-        exp_ball.synthesis_reisou()
+        # if not context.cur_job_context().disable_burning():
+        #     exp_ball.burning()
+        exp_ball.synthesis()
 
     def run_interlude(self, context):
         self.common.back_to_top()

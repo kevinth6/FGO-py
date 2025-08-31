@@ -37,6 +37,8 @@ class TksCampaign:
         if self.jc.chapter():
             self.common.go_chapter(self.jc.chapter())
             schedule.sleep(3)
+        elif self.jc.second_pos():
+            self.common.click(P_SECOND_CAMPAIGN, after_delay=4)
         else:
             self.common.click(P_CUR_CAMPAIGN, after_delay=4)
 
@@ -87,7 +89,7 @@ class TksCampaign:
                     else:
                         break
             elif flag & 0x2 and t.is_on_menu():
-                if self.common.scroll_and_find(lambda t, i: self._search_menu_tasks()):
+                if self.common.scroll_and_find(lambda t, i: self._search_menu_tasks(t)):
                     flag = 0b11011000
                 else:
                     logger.info("On menu but nothing to do. ")
@@ -184,7 +186,6 @@ class TksCampaign:
             elif t.is_on_campaign_shop():
                 self._handle_unlimited_reward()
                 schedule.sleep(1)
-                self._retrieve_dog_food()
             elif t.is_on_map() or t.is_on_menu():
                 if p := t.find(IMG.TKS_CAMPAIGN_REWARD_BTN, A_TOP_RIGHT):
                     self.common.click(p)
@@ -210,7 +211,7 @@ class TksCampaign:
         elif ret is None:
             logger.info('Click center to find a task')
             if self.common.click_and_wait_for_menu_view(P_CENTER, interval=.7, max_times=3):
-                if self.common.scroll_and_find(lambda t, i: self._search_menu_tasks()):
+                if self.common.scroll_and_find(lambda t, i: self._search_menu_tasks(t)):
                     return 0b11011100
                 else:
                     self.common.click(P_TL_BUTTON, 1)
@@ -288,11 +289,18 @@ class TksCampaign:
 
     def _click_task_in_menu(self, pos):
         # task could be unavailable due to the prerequisite not satisfied
+        # a = clamp_rect((pos[0] - 70, pos[1] - 100, pos[0] + 70, pos[1] + 100))
+        # for times in range(0, 3):
+        #     fgoDevice.device.touch(self._clickable_pos_under_next(pos))
+        #     schedule.sleep(.8)
+        #     if not TksDetect().appear(IMG.TKS_CAMPAIGN_NEXT_HALF, a, threshold=.1):
+        #         return True
+        # return False
         a = clamp_rect((pos[0] - 70, pos[1] - 100, pos[0] + 70, pos[1] + 100))
         for times in range(0, 3):
-            fgoDevice.device.touch(self._clickable_pos_under_next(pos))
+            fgoDevice.device.touch(pos)
             schedule.sleep(.8)
-            if not TksDetect().appear(IMG.TKS_CAMPAIGN_NEXT_HALF, a, threshold=.1):
+            if not TksDetect().appear(IMG.TKS_TASK_PROGRESS, a):
                 return True
         return False
 
@@ -309,7 +317,7 @@ class TksCampaign:
             logger.info(f'Pick task: pos: {p}')
             pos = self._clickable_pos_under_next(p)
             if self.common.click_and_wait_for_menu_view(pos, interval=.7):
-                if self.common.scroll_and_find(lambda t, i: self._search_menu_tasks()):
+                if self.common.scroll_and_find(lambda t, i: self._search_menu_tasks(t)):
                     return True
                 else:
                     self.common.click(P_TL_BUTTON, 1)
@@ -318,9 +326,9 @@ class TksCampaign:
         logger.info('Iterated all tasks on map.')
         return False
 
-    def _search_menu_tasks(self):
+    def _search_menu_tasks(self, t):
         logger.info('Iterate menu tasks.')
-        ps = TksDetect.cache.find_multiple(IMG.TKS_CAMPAIGN_NEXT, threshold=.1)
+        ps = t.find_multiple(IMG.TKS_TASK_PROGRESS)
         idx = 0
         while idx < len(ps):
             if self._click_task_in_menu(ps[idx]):
@@ -368,8 +376,7 @@ class TksCampaign:
         count = 0
         while True:
             t = TksDetect(.2, .5)
-            if t.appear(IMG.TKS_UNLIMITED_AVAILABLE, A_UNLIMITED_BUTTONS) \
-                    or t.appear(IMG.TKS_UNLIMITED_AVAILABLE2, A_UNLIMITED_BUTTONS):
+            if t.appear(IMG.TKS_UNLIMITED_AVAILABLE, A_UNLIMITED_BUTTONS) :
                 logger.info('retrieve 1 batch')
                 self.common.click(P_UNLIMITED_GET_MULTI)
                 count = 0
@@ -387,7 +394,7 @@ class TksCampaign:
             else:
                 self.common.click(P_UNLIMITED_GET_ONE, after_delay=.8)
 
-    def _retrieve_dog_food(self):
+    def retrieve_dog_food(self):
         self.common.back_to_top() \
             .click(P_GIFT_BTN_ON_TOP, after_delay=2) \
             .click(P_GIFT_SCROLL_TOP) \
@@ -417,7 +424,7 @@ class TksCampaign:
                     logger.info(f'Find section: {idx}, pos: {ps[idx]}')
                     if rps := self.common.click_and_wait_for_menu_view(ps[idx], (-20, 0)):
                         scanned = self._section_add(t, ps[idx])
-                        func = (lambda t, i: self._find_free(t, mps, rps, i, scanned))
+                        func = (lambda t, i: self._find_free(t, mps, rps, i,     scanned))
                         self.common.scroll_and_find(func)
                         self.common.click(P_TL_BUTTON, 1)
                     else:
@@ -430,11 +437,13 @@ class TksCampaign:
         ret = self._find_free_instance(t, IMG.TKS_INSTANCE_SILVER, mps, mpp, mus, mpimg, 2, True) or ret
         ret = self._find_free_instance(t, IMG.TKS_INSTANCE_GOLD, mps, mpp, mus, mpimg, 3, True) or ret
         ret = self._find_free_instance(t, IMG.TKS_INSTANCE_GREEN, mps, mpp, mus, mpimg, 4, True) or ret
+        ret = self._find_free_instance(t, IMG.TKS_INSTANCE_GREEN2, mps, mpp, mus, mpimg, 5, True) or ret
 
         ret = self._find_free_instance(t, IMG.TKS_INSTANCE_BRONZE_DONE, mps, mpp, mus, mpimg, 1) or ret
         ret = self._find_free_instance(t, IMG.TKS_INSTANCE_SILVER_DONE, mps, mpp, mus, mpimg, 2) or ret
         ret = self._find_free_instance(t, IMG.TKS_INSTANCE_GOLD_DONE, mps, mpp, mus, mpimg, 3) or ret
         ret = self._find_free_instance(t, IMG.TKS_INSTANCE_GREEN_DONE, mps, mpp, mus, mpimg, 4) or ret
+        ret = self._find_free_instance(t, IMG.TKS_INSTANCE_GREEN2_DONE, mps, mpp, mus, mpimg, 5) or ret
 
         return ret
 
@@ -456,7 +465,7 @@ class TksCampaign:
 
     def _instance_scanned(self, t, new_pos, level, cls):
         rect = self._instance_img_rect(t, new_pos)
-        # t.save(name=f'test{level}-{cls}', rect=t.expand(rect, 5))
+        # t.save(name=f'add{level}-{cls}', rect=rect)
         for instance in self.scanned_instances:
             if instance[1] == level and instance[2] == cls and t.appear(instance[0], t.expand(rect, 5), threshold=.02):
                 return instance
@@ -469,7 +478,7 @@ class TksCampaign:
         return ret
 
     def _instance_img_rect(self, t, new_pos):
-        return t.surround((new_pos[0] - 164, new_pos[1] - 58), 400, 24)
+        return t.surround((new_pos[0] + 18, new_pos[1] - 30), 120, 80)
 
     def _section_scanned(self, t, new_pos):
         rect = self._section_img_rect(t, new_pos)

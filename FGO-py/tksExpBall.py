@@ -35,19 +35,28 @@ class TksExpBall:
                 self.burning()
             else:
                 logger.info('burning disabled.')
-            self.synthesis_servant()
-            num = 0
-            while not self.synthesis_reisou(num):
-                num+=1
-            self.synthesis_count += 1
-            logger.info(f'Finished synthesis {self.synthesis_count}')
+            
+            self.synthesis()
             self.common.back_to_top()
         logger.info('ExpBall End.')
+
+    def synthesis(self):
+        self.synthesis_servant()
+        num = 0
+        while not self.synthesis_reisou(num):
+            num+=1
+        self.synthesis_count += 1
+        logger.info(f'Finished synthesis {self.synthesis_count}')
 
     def summon_fp(self):
         logger.info('Summon FP Start.')
         self.common.go_menu(B_MAIN_SUMMON.center)
-        while not TksDetect().appear_btn(B_SUMMON_FP):
+        while True:
+            t = TksDetect().cache
+            if TksDetect().appear(IMG.TKS_BG_FP, A_CENTER_BG):
+                break
+            elif p := self.common.find_dialog_close(t):
+                t.click(p, after_delay=.8)
             self.common.click(P_SUMMON_SWITCH, after_delay=2)
         self.common.click(P_SUMMON_SUMMON, after_delay=1)
 
@@ -79,7 +88,8 @@ class TksExpBall:
     def burning(self):
         logger.info('Burning start.')
         if TksDetect().appear_btn(B_SUMMON_SALE):
-            self.common.click(B_SUMMON_SALE.center, 3)
+            self.common.click(B_SUMMON_SALE.center, 3) \
+                .wait_btn(B_SELECT_FINISH)
         else:
             self.common.back_to_top() \
                 .go_menu(P_MENU_SHOP) \
@@ -92,8 +102,8 @@ class TksExpBall:
             self._handle_servant_burning_option()
             self.jc.servant_burning_checked = True
         self._burn_all()
-
-        if self.jc.reisou_food_max_star() and self.jc.reisou_food_max_star() >= 3:
+ 
+        if not self.jc.reisou_burn_min_star() or self.jc.reisou_burn_min_star() <=3:
             logger.info('Burn reisou.')
             self.common.click(P_SELECT_REISOU)
             if not self.jc.reisou_burning_checked:
@@ -201,23 +211,35 @@ class TksExpBall:
         self.common.click(B_SUMMON_AUTO_SALE.center) \
             .wait(IMG.TKS_DIALOG_DECIDE, A_DIALOG_BUTTONS)
         t = TksDetect()
-        t.find_and_click(B_FILTER_STAR_1_OFF.img, A_SUMMON_OPTION_EXP, threshold=0.01)
-        t.find_and_click(B_FILTER_STAR_2_OFF.img, A_SUMMON_OPTION_EXP, threshold=0.01)
-        t.find_and_click(B_FILTER_STAR_3_ON.img, A_SUMMON_OPTION_EXP, threshold=0.01)
-        t.find_and_click(B_FILTER_STAR_1_OFF.img, A_SUMMON_OPTION_FOU, threshold=0.01)
-        t.find_and_click(B_FILTER_STAR_2_ON.img, A_SUMMON_OPTION_FOU, threshold=0.01)
-        t.find_and_click(B_FILTER_STAR_3_ON.img, A_SUMMON_OPTION_FOU, threshold=0.01)
-        t.find_and_click(B_FILTER_STAR_1_ON.img, A_SUMMON_OPTION_REISOU, threshold=0.01)
-        t.find_and_click(B_FILTER_STAR_2_ON.img, A_SUMMON_OPTION_REISOU, threshold=0.01)
-        t.find_and_click(B_FILTER_STAR_3_ON.img, A_SUMMON_OPTION_REISOU, threshold=0.01)
+        if self.jc.exp_only():
+            t.find_and_click(B_FILTER_STAR_1_OFF.img, A_SUMMON_OPTION_EXP, threshold=0.01)
+            t.find_and_click(B_FILTER_STAR_2_OFF.img, A_SUMMON_OPTION_EXP, threshold=0.01)
+            t.find_and_click(B_FILTER_STAR_3_OFF.img, A_SUMMON_OPTION_EXP, threshold=0.01)
+            t.find_and_click(B_FILTER_STAR_1_OFF.img, A_SUMMON_OPTION_FOU, threshold=0.015)
+            t.find_and_click(B_FILTER_STAR_2_OFF.img, A_SUMMON_OPTION_FOU, threshold=0.015)
+            t.find_and_click(B_FILTER_STAR_3_OFF.img, A_SUMMON_OPTION_FOU, threshold=0.015)
+            t.find_and_click(B_FILTER_STAR_1_OFF.img, A_SUMMON_OPTION_REISOU, threshold=0.015)
+            t.find_and_click(B_FILTER_STAR_2_OFF.img, A_SUMMON_OPTION_REISOU, threshold=0.015)
+            t.find_and_click(B_FILTER_STAR_3_OFF.img, A_SUMMON_OPTION_REISOU, threshold=0.015)
+        else:
+            t.find_and_click(B_FILTER_STAR_1_OFF.img, A_SUMMON_OPTION_EXP, threshold=0.01)
+            t.find_and_click(B_FILTER_STAR_2_OFF.img, A_SUMMON_OPTION_EXP, threshold=0.01)
+            t.find_and_click(B_FILTER_STAR_3_OFF.img, A_SUMMON_OPTION_EXP, threshold=0.01)
+            t.find_and_click(B_FILTER_STAR_1_OFF.img, A_SUMMON_OPTION_FOU, threshold=0.015)
+            t.find_and_click(B_FILTER_STAR_2_OFF.img, A_SUMMON_OPTION_FOU, threshold=0.015)
+            t.find_and_click(B_FILTER_STAR_3_ON.img, A_SUMMON_OPTION_FOU, threshold=0.015)
+            t.find_and_click(B_FILTER_STAR_1_OFF.img, A_SUMMON_OPTION_REISOU, threshold=0.015)
+            t.find_and_click(B_FILTER_STAR_2_ON.img, A_SUMMON_OPTION_REISOU, threshold=0.015)
+            t.find_and_click(B_FILTER_STAR_3_ON.img, A_SUMMON_OPTION_REISOU, threshold=0.015)
 
         t.find_and_click(IMG.TKS_DIALOG_DECIDE, A_DIALOG_BUTTONS)
 
-    def _handle_sort_option(self):
+    def _handle_sort_option(self, fav=True):
         while not TksDetect().appear_btn(B_SORT_FILTER_ON):
             self.common.click(B_SORT_FILTER_ON.center, 1)
-        while not TksDetect().appear_btn(B_SORT_FAV_ON):
-            self.common.click(B_SORT_FAV_ON.center, 1)
+        if fav:
+            while not TksDetect().appear_btn(B_SORT_FAV_ON):
+                self.common.click(B_SORT_FAV_ON.center, 1)
         self.common.click(P_SORT_SUBMIT, 1)
         while not TksDetect().appear_btn(B_SORT_DEC):
             self.common.click(B_SORT_DEC.center, 1)
@@ -270,12 +292,16 @@ class TksExpBall:
             self.common.click(B_SELECT_GIRD.center, 2)
         self.common.click(P_FILTER_FILTER, 1) \
             .click(P_FILTER_RESET, .7) \
-            .click(P_OPTIONS_SCROLL_END, .7) \
-            .click(P_NOT_MAX_LEVEL, .7) \
-            .click(B_FILTER_SUBMIT.center, 1) \
+            .click(P_OPTIONS_SCROLL_START, .7) 
+        self.common.scroll_and_click(IMG.TKS_NOT_MAX_LEVEL, A_OPTIONS_LEFT_BTNS, end_pos=P_OPTIONS_SCROLL_END, 
+                                     max_swipe=10, top_pos=P_OPTIONS_SCROLL_START, scroll_area=A_SWIPE_CENTER_DOWN_S)
+        #     .click(P_OPTIONS_SCROLL_START, .7) 
+        #     .click(P_OPTIONS_SCROLL_SECTION1, .7) \
+        #     .click(P_NOT_MAX_LEVEL, .7) \
+        self.common.click(B_FILTER_SUBMIT.center, 1) \
             .click(P_SORT_SORT, 1) \
             .click(P_SORT_BYLEVEL, .7)
-        self._handle_sort_option()
+        self._handle_sort_option(False)
 
     def _handle_synthesis_servant_food_option(self):
         logger.info('Handle systhesis servant food option')
@@ -283,10 +309,11 @@ class TksExpBall:
             self.common.click(B_SELECT_GIRD.center, 2)
         self.common.click(P_FILTER_FILTER, 1) \
             .click(P_FILTER_RESET, .7) \
-            .click(P_OPTIONS_SCROLL_END, .7) \
-            .click(P_SERVANT_OPTION_EXP, .7) \
-            .click(P_SERVANT_OPTION_FOU, .7) \
-            .click(B_FILTER_SUBMIT.center, 1) \
+            .click(P_OPTIONS_SCROLL_START, .7) \
+            .click(P_OPTIONS_SCROLL_SECTION1, .7)
+            # .click(P_SERVANT_OPTION_EXP, .7) \
+            # .click(P_SERVANT_OPTION_FOU, .7) \
+        self.common.click(B_FILTER_SUBMIT.center, 1) \
             .click(P_SORT_SORT, 1) \
             .click(P_SORT_BYLEVEL, .7)
         self._handle_sort_option()
@@ -297,9 +324,10 @@ class TksExpBall:
             self.common.click(B_SELECT_GIRD.center, 2)
         self.common.click(P_FILTER_FILTER, 1) \
             .click(P_FILTER_RESET, .7) \
-            .click(P_OPTIONS_SCROLL_END, .7) \
-            .click(P_SERVANT_OPTION_SERVANT, .7) \
-            .click(B_FILTER_SUBMIT.center, 1) \
+            .click(P_OPTIONS_SCROLL_START, .7)
+        self.common.scroll_and_click(IMG.TKS_SERVANT_SELECT, A_OPTIONS_LEFT_BTNS, end_pos=P_OPTIONS_SCROLL_END, 
+                                     max_swipe=10, threshold=.02, top_pos=P_OPTIONS_SCROLL_START, scroll_area=A_SWIPE_CENTER_DOWN_S)         
+        self.common.click(B_FILTER_SUBMIT.center, 1) \
             .click(P_SORT_SORT, 1) \
             .click(P_SORT_BYLEVEL, .7)
         self._handle_sort_option()
@@ -310,8 +338,13 @@ class TksExpBall:
             self.common.click(B_SELECT_GIRD.center, 3)
         self.common.click(P_FILTER_FILTER, 1) \
             .click(P_FILTER_RESET, .7) \
-            .click(P_OPTIONS_SCROLL_START, .7) \
-            .click(B_FILTER_STAR_3_OFF.center, .7)
+            .click(P_OPTIONS_SCROLL_START, .7) 
+        if not self.jc.reisou_burn_min_star() or self.jc.reisou_burn_min_star() <= 3: 
+            self.common.click(B_FILTER_STAR_3_OFF.center, .7)
+        if self.jc.reisou_burn_min_star() and self.jc.reisou_burn_min_star() <= 2: 
+            self.common.click(B_FILTER_STAR_2_OFF.center, .7)
+        if self.jc.reisou_burn_min_star() and self.jc.reisou_burn_min_star() <= 1: 
+            self.common.click(B_FILTER_STAR_1_OFF.center, .7)
         self.common.click(B_FILTER_SUBMIT.center, 1)
 
     def _handle_code_burning_option(self):

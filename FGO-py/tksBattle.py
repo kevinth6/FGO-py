@@ -109,7 +109,8 @@ class TksTurn(Turn):
         if 'skills' in conf:
             for skill_str in str(conf['skills']).split(','):
                 skill_str = skill_str.strip()
-                ret.append(skill_str)
+                if(len(skill_str) > 0) :
+                    ret.append(skill_str)
         return ret
 
     def castServantSkill(self, pos, skill, target):
@@ -274,7 +275,7 @@ class TksBattleGroup:
         has_friend = True
         count = 0
         while True:
-            t = TksDetect(.2, .3)
+            t = TksDetect(.2, .5)
             if t.isNoFriend() or not has_friend:
                 self.common.wait(IMG.TKS_FRIEND_REFRESH, A_FRIEND_OPTIONS_BAR)
                 logger.info('Refresh friends.')
@@ -285,6 +286,7 @@ class TksBattleGroup:
                 count += 1
                 if count > 50:
                     raise ScriptStop('Can refresh friends, stuck and exit.')
+                schedule.sleep(2)
             else:
                 if p := self.common.scroll_and_find(self._friend_find_func(), end_pos=P_FRIEND_SCROLL_END,
                                                     top_pos=P_FRIEND_SCROLL_TOP):
