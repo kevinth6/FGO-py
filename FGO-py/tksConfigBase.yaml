@@ -1,0 +1,202 @@
+device: emulator-5554
+loggerLevel: INFO
+stat_file: fgoCom/stat.json
+all_jobs:
+  # - name: exp_ball
+  #   type: exp_ball
+  #   timeout: 7200
+  #   max_synthesis: 3
+  #   # exp_only: true
+  #   reisou_burn_min_star: 3
+  #   code_burn_max_star: 2
+
+
+  # - name: skip
+  #   type: skip
+
+  - name: any_rank_up
+    type: rank_up
+    timeout: 5400
+    apples: 0
+    team_index: 9
+    friend_reisou: kp
+    friend_class: caster
+    #  friend_servant: caber
+
+  - name: run_material
+    type: free
+    chapter: main_2.6
+    section: oxford
+    timeout: 3600
+    apples: 0
+    team_index: 9
+    friend_reisou: kp
+    friend_class: caster
+    # friend_servant: caber
+
+
+  # - name: free_beast
+  #   type: free
+  #   chapter: campaign_202507
+  #   section: 90p
+  #   timeout: 3600
+  #   # apples: 2
+  #   team_index: 8
+  #   campaign_reisou: 1
+  #   campaign_reisou_idx: 0
+  #   friend_class: caster
+  #   friend_servant: caber
+  #   # use_pot: true
+
+#  - name: any_interlude
+#    type: interlude
+#    timeout: 3600
+#    apples: 0
+#    team_index: 0
+#
+
+  # - name: run_daily
+  #   type: free
+  #   chapter: daily_quest
+  #   instance: dogfood4
+  #   timeout: 3600
+  #   apples: 0
+  #   team_index: 9
+  #   friend_reisou: kp
+  #   friend_class: caster
+  #   # friend_servant: caber
+
+#  - name: run_qp
+#    type: free
+#    chapter: daily_quest
+#    instance: qp4
+#    timeout: 3600
+#    apples: 0
+#    team_index: 8
+#    friend_reisou: qp
+#    friend_class: caster
+  #  friend_servant: caber
+
+#  - name: synthesis
+#    type: synthesis
+#    reisou_burn_min_star: 3
+#    code_burn_max_star: 2
+
+presets:
+  summer2025:
+    # ciel, foxa, rba; -cd uniform
+    
+  oceania90ss:
+    # siegfried, wfoxa, oberon; battle uniform
+    friend_class: assassin
+    friend_servant: fox_assassin
+
+  valentine2025:
+    # harb, caber, friend_caber, oberon, x, x ; battle uniform
+    friend_class: caster
+    friend_servant: caber
+    turns:
+      - skills: '001, 01, 121, 221'
+        cards: '612345'
+      - skills: '20, 111, 211, m2_36, 20'
+        cards: '7612345'
+      - skills: '10, 211, 221, m0'
+        cards: '612345'
+  xmas2024:
+    # xnemo, longma, friend_caber, oberon, x, x ; battle uniform
+    friend_class: caster
+    friend_servant: caber
+    turns:
+      - skills: '01, 02, 10, 11, 12, 20, 222'
+        cards: '612345'
+      - skills: ''
+        cards: '8712345'
+      - skills: '212, 00, m2_36, 20, 212, 222, m0'
+        cards: '712345'
+  sishtar_wcaber:
+    # sishtar, caber, friend_caber, x, x, x ; arctic uniform
+    friend_class: caster
+    friend_servant: caber
+    turns:
+      - skills: '00, 02, 111, 121, 211, 221'
+        cards: '612345'
+      - skills: '10'
+        cards: '612345'
+      - skills: '012, 20, m11'
+        cards: '612345'
+  morgan_wfoxa_2t:
+    # morgan(30np), foxa, friend_foxa, x, x, x ; any uniform
+    friend_class: assassin
+    friend_servant: fox_assassin
+    turns:
+      - skills: '00, 011, 121, 221'
+        cards: '612345'
+      - skills: '101, 201, 211'
+        cards: '612345'
+  morgan_wfoxa_oberon:
+    # morgan(30np), foxa, friend_foxa, x, x, oberon ; combat uniform
+    friend_class: assassin
+    friend_servant: fox_assassin
+    turns:
+      - skills: '00, 011, 02, 121, 221'
+        cards: '612345'
+      - skills: '101, 111, 201, 211, m2_36, 201, m0'
+        cards: '612345'
+      - skills: '00, 011, 211, 221'
+        cards: '612345'
+  morgan_wfoxa_kongming:
+    # morgan(30np), foxa, friend_foxa, x, x, kongming ; combat uniform
+    friend_class: assassin
+    friend_servant: fox_assassin
+    turns:
+      - skills: '00, 011, 121, 221'
+        cards: '612345'
+      - skills: '101, 201, 211, m2_36'
+        cards: '612345'
+      - skills: '00, 011, 111, 201, 21, 22, m0'
+        cards: '612345'
+  sishtar_caber_oberon_t3np80:
+    # sishtar(50np_reisou), oberon, friend_caber, x, x, x ; arctic uniform
+    friend_class: caster
+    friend_servant: caber
+    turns:
+      - skills: '00, 10, 211, 221'
+        cards: '612345'
+      - skills: '02'
+        cards: '612345'
+      - skills: '013, 111, 121, 20, m11'
+        cards: '612345'
+  habetrot_caber_oberon:
+    # harbrot, oberon, friend_caber, x, x, x ; arctic uniform
+    friend_class: caster
+    friend_servant: caber
+    turns:
+      - skills: '011, 221'
+        cards: '612345'
+      - skills: '101, 20, 211'
+        cards: '612345'
+      - skills: '111, m11'
+        cards: '612345'
+  morgan_kintoki_oberon:
+    # morgan(30np), kintoki, friend_oberon, x, x, x ; 10np uniform
+    friend_class: ex
+    friend_servant: oberon
+    turns:
+      - skills: '00, 20'
+        cards: '612345'
+      - skills: '012, 10, m22, m02'
+        cards: '712345'
+      - skills: '112, 212, 222'
+        cards: '712345'
+  morgan_kintoki_oberon_20np:
+    # morgan(30np), kintoki, friend_oberon, x, x, x ; 20np uniform
+    friend_class: ex
+    friend_servant: oberon
+    turns:
+      - skills: '00, 20'
+        cards: '612345'
+      - skills: '012, 10, m12'
+        cards: '712345'
+      - skills: '112, 212, 222'
+        cards: '712345'
+account_presets:
