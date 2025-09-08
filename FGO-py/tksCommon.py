@@ -3,6 +3,7 @@ import fgoSchedule
 from fgoDetect import IMG
 from fgoLogging import getLogger
 from tksDetect import *
+from fgoKernel import goto
 
 logger = getLogger('TksCommon')
 
@@ -113,7 +114,7 @@ class TksCommon:
                     not TksDetect.cache.appear(IMG.LISTBAR, clamp_rect(
                         (top_pos[0] - 35, top_pos[1] - 35, end_pos[0] + 35, end_pos[1] + 35))):
                 break
-            fgoDevice.device.swipe(scroll_area)
+            self.swipe(scroll_area)
             schedule.sleep(.5)
 
         return s
@@ -248,7 +249,7 @@ class TksCommon:
                 i += 1
                 if i > 2:
                     break
-                fgoDevice.device.swipe(A_SWIPE_CENTER_UP)
+                self.swipe(A_SWIPE_CENTER_UP)
         return None
 
     def _pinch_and_swipe_down(self):
@@ -258,9 +259,9 @@ class TksCommon:
         TksDetect().find_and_click_btn(B_MAIN_TL_CLOSE, after_delay=1)
 
         schedule.sleep(1)
-        fgoDevice.device.swipe(A_SWIPE_CENTER_DOWN)
+        self.swipe(A_SWIPE_CENTER_DOWN)
         schedule.sleep(1)
-        fgoDevice.device.swipe(A_SWIPE_CENTER_DOWN)
+        self.swipe(A_SWIPE_CENTER_DOWN)
         schedule.sleep(1)
 
     def go_on_map_and_menu(self, map_img, menu_img, map_screen, map_pos, menu_scroll, menu_pos):
@@ -276,7 +277,7 @@ class TksCommon:
                 logger.info(f'find map location by screen {map_screen} and pos {map_pos}')
                 self._pinch_and_swipe_down()
                 for i in range(map_screen):
-                    fgoDevice.device.swipe(A_SWIPE_CENTER_UP)
+                    self.swipe(A_SWIPE_CENTER_UP)
                     schedule.sleep(1)
                 p = self.click_and_wait_for_menu_view(map_pos)
 
@@ -285,7 +286,7 @@ class TksCommon:
                 logger.info(f'find menu location by scroll {menu_scroll} and pos {menu_pos}')
                 self.click(P_SCROLL_TOP, after_delay=.8)
                 for i in range(menu_scroll):
-                    fgoDevice.device.swipe(A_SWIPE_RIGHT_DOWN)
+                    self.swipe(A_SWIPE_RIGHT_DOWN)
                     schedule.sleep(.5)
                 p = menu_pos
             self.click((p[0] - 100, p[1]), after_delay=.7)
@@ -293,3 +294,15 @@ class TksCommon:
         else:
             logger.warning(f"Can't open section menu")
             return False
+
+    def swipe(self, rect):
+        # Convert rect to begin/end points
+        begin = [rect[0], rect[1]]
+        end = [rect[2], rect[3]]
+        
+        fgoDevice.device.swipe(begin, end)
+
+    def goto(self, quest):
+        logger.info(f'goto {quest}')
+        goto(quest)
+        return True

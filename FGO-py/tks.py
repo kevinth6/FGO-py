@@ -1,10 +1,9 @@
 import yaml
-import sys
+import argparse,os,sys
 from fgoConst import VERSION
 import fgoDevice
 import fgoLogging
 import fgoSchedule
-
 
 # Load base config
 with open('tksConfigBase.yaml', "r", encoding="utf-8") as f:
@@ -22,6 +21,8 @@ def merge_dicts(base, override):
         else:
             base[k] = v
     return base
+
+tksConfig = merge_dicts(tksConfig_base, tksConfig)
 
 args = sys.argv[1:]
 

@@ -26,3 +26,5 @@ tks2.py
 tksDaemon.yaml
 **/accounts/*.png
 tksResult/
+fgoLog/
+fgoCom/

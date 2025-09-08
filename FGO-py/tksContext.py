@@ -301,3 +301,7 @@ class TksJobContext:
     def second_pos(self):
         """second position in the chapter menu"""
         return safe_get(self.job_config, 'second_pos')
+    
+    def goto(self):
+        """quest to goto"""
+        return safe_get(self.job_config, 'goto')

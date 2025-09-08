@@ -47,7 +47,7 @@ class TksInterface:
         for i in range(max_swipe):
             if s := TksDetect().find_and_click(ACCOUNTS[account], A_LOGIN_BOX, threshold=.02):
                 break
-            fgoDevice.device.swipe((625, 420, 625, 395))
+            self.common.swipe((625, 420, 625, 395))
             schedule.sleep(0.8)
         if not s:
             raise FlowException("Can find the account " + account)
@@ -189,74 +189,32 @@ class TksInterface:
             else:
                 break
 
-    def run_interlude(self):
-        logger.info(f'Go interlude')
-        self.common.go_chapter('interlude')
-        schedule.sleep(1)
-
-        after = False
-        while True:
+    def run_reishift(self):
+        cjc = self.context.cur_job_context()
+        quest = []
+        if cjc.goto():
+            quest = tuple(map(int, cjc.goto().split("-")))
+        self.common.goto(quest)
+        for i in range(3):
+            p = self.common.scroll_and_find(lambda t, i: t.find(IMG.TKS_FREE_DONE, A_INSTANCE_MENUS))
+            if p:
+                break
+        if p:
+            self.common.click(p, after_delay=.8)
             t = TksDetect(.3, .3)
-            if t.appear(IMG.TKS_CHOOSE_FRIEND, A_TOP_RIGHT) or t.appear(IMG.TKS_TEAM_CONFIRM, A_TOP_RIGHT):
-                TksBattleGroup(self.context, run_once=True)()
-                after = True
-            elif t.isApEmpty():
-                logger.info('AP empty.')
-                if not self.common.eat_apple(self.context):
-                    logger.info('Exit due to no AP.')
-                    break
-            elif self.common.handle_special_drop(t, self.context):
-                logger.info('Special dropped.')
-            elif p := t.find(IMG.TKS_DIALOG_INTERLUDE, A_DIALOG_BUTTONS):
-                logger.info("Go to another interlude")
-                self.common.click(p, .7)
-            elif t.find_and_click(IMG.TKS_DIALOG_BEGIN, A_DIALOG_BUTTONS):
-                logger.info('click begin')
-            elif t.appear_btn(B_SUMMON_SALE):
-                raise FlowException('Card position full. Need synthesis. ')
-            elif p := self.common.find_dialog_close(t):
-                self.common.click(p, .7)
-            elif t.is_on_menu():
-                if after:
-                    while p := TksDetect().find(IMG.TKS_TL_INTERLUDE, A_TL_BUTTONS):
-                        logger.info(
-                            "After battle, in interlude section, go out")
-                        self.common.click(p, 1)
-                    after = False
-                else:
-                    i = 0
-                    while i < 3:
-                        if t.appear(IMG.TKS_TL_INTERLUDE, A_TL_BUTTONS):
-                            logger.info(
-                                "In interlude section, select first instance in menu")
-                            self.common.click(KEYMAP['8'], 3)
-                            if self._enter_interlude():
-                                break
-                        else:
-                            self.common.click(P_SCROLL_TOP, .7)
-                            logger.info("Select first instance in menu")
-                            self.common.click(KEYMAP['8'], 3)
-                            if self._enter_interlude() or TksDetect.cache.appear(IMG.TKS_TL_INTERLUDE, A_TL_BUTTONS):
-                                break
-                        i += 1
-                    if i >= 3:
-                        logger.info('No interlude to run. Exit')
-                        break
-            elif t.is_on_top():
-                logger.info("Unexpected on top. Re-enter")
-                self.common.go_chapter('interlude')
-                schedule.sleep(1)
-            elif p := t.find(IMG.TKS_OPTION_STUCK):
-                t.click(p)
-            elif self.common.skip_possible_story():
-                pass
-            else:
-                fgoDevice.device.perform('\xBB', (500,))
+            if pos := t.find(IMG.TKS_TASK_BEGIN, A_DIALOG_BUTTONS, .05):
+                self.common.click(pos, .8)
 
-    def _enter_interlude(self):
-        return TksDetect().appear(IMG.TKS_CHOOSE_FRIEND, A_TOP_RIGHT) \
-            or TksDetect.cache.appear(IMG.TKS_DIALOG_BEGIN, A_DIALOG_BUTTONS) \
-            or TksDetect.cache.isApEmpty()
+            if pos := self.common.find_dialog_close(t):
+                self.common.click(pos, .3)
+                return False
+
+            if TksBattleGroup(self.context)():
+                self.common.back_to_top()
+                return True
+        else:
+            logger.warning('No free instance found. ')
+            return False
 
     def run_rank_up(self):
         logger.info(f'Go rank up')

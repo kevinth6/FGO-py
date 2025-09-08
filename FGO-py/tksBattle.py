@@ -74,9 +74,8 @@ class TksTurn(Turn):
                             self.castMasterSkill(int(skill[0]), (int(skill[1]) if len(skill) > 1 else 0))
                     else:
                         self.castServantSkill(int(skill[0]), int(skill[1]), (int(skill[2]) if len(skill) > 2 else 0))
-                self.enemy = [TksDetect.cache.getEnemyHp(i) for i in range(6)]
                 fgoDevice.device.perform(' ', (2100,))
-                cards = str(turn_conf['cards'])
+                cards = self._parse_cards(str(turn_conf['cards']))
                 logger.info(f'cards: {cards}')
                 fgoDevice.device.perform(cards, (300, 300, 2300, 1300, 6000))
             except TimeoutException as tex:
@@ -86,23 +85,24 @@ class TksTurn(Turn):
                 super().__call__(turn)
 
     def _setup_turn(self, turn):
-        if not TksDetect.cache:
-            TksDetect(.2)
+        TksDetect(.2)
         self.stage, self.stageTurn = [t := TksDetect.cache.getStage(), 1 + self.stageTurn * (self.stage == t)]
         if turn == 1:
             TksDetect.cache.setupServantDead()
-            self.stageTotal = TksDetect.cache.getStageTotal()
-            self.servant = [(lambda x: (x,) + servantData.get(x, ()))(TksDetect.cache.getFieldServant(i)) for i in
-                            range(3)]
+            self.stageTotal=TksDetect.cache.getStageTotal()
+            self.servant=[(lambda x:(x,)+servantData.get(x,(0,0,0,0,(0,0),((0,0),(0,0),(0,0)))))(TksDetect.cache.getFieldServant(i))for i in range(3)]
         else:
             self._setup_servant_dead()
         if self.stageTurn == 1:
             TksDetect.cache.setupEnemyGird()
+        self.enemy=[TksDetect.cache.getEnemyHp(i)for i in range(6)]
+        if self.stageTurn==1 or self.enemy[self.target]==0:
+            self.target=numpy.argmax(self.enemy)
 
     def _setup_servant_dead(self):
-        for i in (i for i in range(3) if TksDetect.cache.isServantDead(i)):
-            self.servant[i] = (lambda x: (x,) + servantData.get(x, ()))(TksDetect.cache.getFieldServant(i))
-            self.countDown[0][i] = [0, 0, 0]
+        for i in(i for i in range(3)if TksDetect.cache.isServantDead(i)):
+                self.servant[i]=(lambda x:(x,)+servantData.get(x,(0,0,0,0,(0,0),((0,0),(0,0),(0,0)))))(TksDetect.cache.getFieldServant(i))
+                self.countDown[0][i]=[0,0,0]
 
     def _parse_skills(self, conf):
         ret = []
@@ -114,8 +114,7 @@ class TksTurn(Turn):
         return ret
     
     def _parse_cards(self, cards):
-        if not TksDetect.cache:
-            TksDetect(.2)
+        TksDetect(.2)
         colors = TksDetect.cache.getCardColor()  # Example: [0,1,0,2,2]
         color_map = {'a': 0, 'q': 1, 'b': 2}    # art=0, quick=1, buster=2
         used_indices = []
@@ -148,23 +147,6 @@ class TksTurn(Turn):
                         used_indices.append(num)
                     # ignore if already used
         return ''.join(result)
-
-    def castServantSkill(self, pos, skill, target):
-        fgoDevice.device.press(('ASD', 'FGH', 'JKL')[pos][skill])
-        if TksDetect(.7).isSkillNone():
-            logger.warning(f'Skill {pos} {skill} Disabled')
-            self.countDown[0][pos][skill] = 999
-            fgoDevice.device.press('\x08')
-        elif TksDetect.cache.isSkillCastFailed():
-            logger.warning(f'Skill {pos} {skill} Cast Failed')
-            self.countDown[0][pos][skill] = 1
-            fgoDevice.device.press('J')
-        elif t := TksDetect.cache.getSkillTargetCount():
-            fgoDevice.device.perform(['3333', '2244', '3234'][t - 1][target], (300,))
-        fgoDevice.device.press('\x08')
-        while not TksDetect().isTurnBegin():
-            pass
-        TksDetect(.5)
 
     def castMasterSkillWithSwap(self, skill, servant1, servant2):
         self.countDown[1][skill] = 15
@@ -387,14 +369,14 @@ class TksBattleGroup:
 
     def _friend_option_scroll(self, func, find_return=False):
         self.common.click(P_FRIEND_OPTION_SCROLL_TOP, after_delay=.5)
-        for i in range(5):
+        for i in range(10):
             ret = func(TksDetect())
             if find_return and ret:
                 return ret
             if TksDetect.cache.is_list_end(P_FRIEND_OPTION_SCROLL_END):
                 break
-            fgoDevice.device.swipe(A_SWIPE_FRIEND_OPTION_DOWN)
-            schedule.sleep(0.3)
+            self.common.swipe(A_SWIPE_FRIEND_OPTION_DOWN)
+            schedule.sleep(.5)
 
     def _disable_all_reisou(self, t):
         ps = t.find_multiple(IMG.TKS_FRIEND_OPTION_SHOW, A_FRIEND_SHOW_BUTTONS, .06)

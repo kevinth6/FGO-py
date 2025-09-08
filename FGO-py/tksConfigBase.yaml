@@ -14,6 +14,39 @@ all_jobs:
   # - name: skip
   #   type: skip
 
+  - name: run_order_call
+    type: reishift
+    goto: 5-0-13-0
+    timeout: 1800
+    apples: 0
+    team_index: 0
+    friend_reisou: kp
+    use_preset: oceania90ss
+
+  # - name: run_material
+  #   type: reishift
+  #   goto: 3-6-14-0
+  #   timeout: 3600
+  #   apples: 0
+  #   team_index: 9
+  #   friend_reisou: kp
+  #   friend_class: caster
+  #   # friend_servant: caber
+
+  - name: run_campaign
+    type: free
+    chapter: campaign_summer2025
+    section: 90pp
+    timeout: 3600
+    # apples: 2
+    team_index: 1
+    campaign_reisou: 2
+    campaign_reisou_idx: 7
+    use_preset: ciel_foxa_rba
+    # friend_class: caster
+    # friend_servant: caber
+    # use_pot: true
+
   - name: any_rank_up
     type: rank_up
     timeout: 5400
@@ -22,31 +55,6 @@ all_jobs:
     friend_reisou: kp
     friend_class: caster
     #  friend_servant: caber
-
-  - name: run_material
-    type: free
-    chapter: main_2.6
-    section: oxford
-    timeout: 3600
-    apples: 0
-    team_index: 9
-    friend_reisou: kp
-    friend_class: caster
-    # friend_servant: caber
-
-
-  # - name: free_beast
-  #   type: free
-  #   chapter: campaign_202507
-  #   section: 90p
-  #   timeout: 3600
-  #   # apples: 2
-  #   team_index: 8
-  #   campaign_reisou: 1
-  #   campaign_reisou_idx: 0
-  #   friend_class: caster
-  #   friend_servant: caber
-  #   # use_pot: true
 
 #  - name: any_interlude
 #    type: interlude
@@ -83,13 +91,29 @@ all_jobs:
 #    code_burn_max_star: 2
 
 presets:
-  summer2025:
+  ciel_foxa_rba:
     # ciel, foxa, rba; -cd uniform
+    friend_class: assassin
+    friend_servant: fox_assassin
+    turns:
+      - skills: '00, 01, 02, 101, 11, 121, 211, 221'
+        cards: 'b6b12345'
+      - skills: '201, m21, 00, 01'
+        cards: 'q612345'
+      - skills: '02'
+        cards: '6bb12345'
     
   oceania90ss:
     # siegfried, wfoxa, oberon; battle uniform
     friend_class: assassin
     friend_servant: fox_assassin
+    turns:
+      - skills: '00, 02, 121, 221'
+        cards: '612345'
+      - skills: '101, 201, 02'
+        cards: '612345'
+      - skills: '00, m2_36, 20, 211, 221, m0'
+        cards: '612345'
 
   valentine2025:
     # harb, caber, friend_caber, oberon, x, x ; battle uniform
@@ -200,3 +224,5 @@ presets:
       - skills: '112, 212, 222'
         cards: '712345'
 account_presets:
+
+

@@ -10,7 +10,6 @@ from tksInterface import TksInterface
 from tksContext import TksContext, load_stat
 from tksBattle import TksBattleGroup, TksBattle, TksTurn
 from fgoFuse import fuse, StuckException, TimeoutException
-from tksCampaign import TksCampaign
 from tksExpBall import TksExpBall
 from fgoSchedule import ScriptStop
 
@@ -89,14 +88,18 @@ class TksMain:
         # TksCommon(self.config).scroll_and_click(IMG.TKS_FREE_DONE, A_INSTANCE_MENUS)
         assert fgoDevice.device.available
         context = TksContext(self.config, 'tulkasmstr')
-        context.current_job = 'run_material'
-        # self.run_free(context)
+        context.current_job = 'run_campaign'
+        self.run_free(context)
+        # TksBattleGroup(context)._handle_campaign_friend_options()
 
         # self.run_exp_ball(context)
         # g = TksBattleGroup(context, run_once=True)
         # g.jc.campaign_friend_checked = True
         # g.choose_friend()
         # g.choose_friend()
+
+        # battle = TksBattle(context)
+        # battle()
         
         # context.current_job = 'any_rank_up'
         # TksCommon().back_to_top()
@@ -115,10 +118,10 @@ class TksMain:
         # TksBattleGroup(context).choose_friend()
         # self._cleanup()
         # TksCommon().back_to_top()
-        turn = TksTurn()
-        print(turn._parse_cards('b6b12345'))
-        print(turn._parse_cards('67812345'))
-        print(turn._parse_cards('q7a12345'))
+        # turn = TksTurn()
+        # print(turn._parse_cards('b6b12345'))
+        # print(turn._parse_cards('67812345'))
+        # print(turn._parse_cards('q7a12345'))
         # turn._setup_turn(1)
         # turn.castServantSkill(1, 1, 1)
         # fgoDevice.device.perform('Q' + 'WER'[2], (300, 300))
@@ -226,23 +229,9 @@ class TksMain:
         self.common.back_to_top()
         return TksInterface(context).run_free()
 
-    def run_campaign_main(self, context):
+    def run_reishift(self, context):
         self.common.back_to_top()
-        return TksCampaign(context).run_main_tasks()
-
-    def run_campaign_free(self, context):
-        self.common.back_to_top()
-        return TksCampaign(context).run_free()
-
-    def run_campaign_reward(self, context):
-        self.common.back_to_top()
-        return TksCampaign(context).retrieve_campaign_reward()
-
-    def run_campaign_unlimited_reward(self, context):
-        self.common.back_to_top()
-        TksCampaign(context).retrieve_unlimited_reward()
-        TksCampaign(context).retrieve_dog_food()
-        TksExpBall(context).synthesis_servant()
+        return TksInterface(context).run_reishift()
 
     def run_exp_ball(self, context):
         self.common.back_to_top()

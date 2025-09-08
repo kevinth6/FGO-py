@@ -68,6 +68,13 @@ def main():
             kill_proc(game_pid)
             time.sleep(5)
 
+        adb_pid = find_pid('adb.exe')
+        if adb_pid:
+            log(f'kill adb proc {adb_pid}')
+            kill_proc(adb_pid)
+            time.sleep(5)
+
+
         cur = time.time()
         exception = False
         if os.path.exists(daemonConf['stat_file']):

@@ -2,7 +2,7 @@ import cv2
 import numpy
 import os
 
-from fgoDetect import XDetect, coroutine, IMG
+from fgoDetect import XDetectBase, XDetectCN, coroutine, IMG
 from fgoDevice import device
 from fgoFuse import fuse
 from fgoLogging import getLogger
@@ -44,12 +44,12 @@ for i in os.listdir('fgoImage/instance'):
         elif j.startswith('instance_'):
             INSTANCES[i]['instances'][j[9:]] = img
 
-# load class for menu
-CLASSES_S = {
-    i[:-4]: (lambda x: (x[..., :3], x[..., 3]))(
-        cv2.imread(f'fgoImage/class_s/{i}', cv2.IMREAD_UNCHANGED)
-    ) for i in os.listdir('fgoImage/class_s') if i.endswith('.png')
-}
+# # load class for menu
+# CLASSES_S = {
+#     i[:-4]: (lambda x: (x[..., :3], x[..., 3]))(
+#         cv2.imread(f'fgoImage/class_s/{i}', cv2.IMREAD_UNCHANGED)
+#     ) for i in os.listdir('fgoImage/class_s') if i.endswith('.png')
+# }
 
 FRIEND_REISOUS = {
     i[:-4]: (lambda x: (x[..., :3], x[..., 3]))(
@@ -96,14 +96,15 @@ class Button:
         return result
 
 
-class TksDetect(XDetect):
-
+class TksDetect(XDetectCN):
+    cache = None
     def __init__(self, ante_latency=.1, post_latency=.1):
         schedule.sleep(ante_latency)
         super().__init__()
         fuse.increase()
         schedule.sleep(post_latency)
         self.device = device
+        TksDetect.cache=self
 
     def _compare(self, *args, **kwargs):
         if super()._compare(*args, **kwargs):
@@ -259,7 +260,7 @@ P_MENU_ROOM = (1142, 602)
 P_MENU_SHOP = (807, 602)
 P_RIGHT_SCROLL_END = (1257, 590)
 P_BATTLE_OPTION = (1194, 200)
-P_BATTLE_OPTION_CLOSE = (1105, 165)
+P_BATTLE_OPTION_CLOSE = (1174, 108)
 P_BATTLE_ATTACK = (1154, 626)
 P_BATTLE_SPEED = (1130, 62)
 P_BATTLE_BACK = (1200, 682)
@@ -327,7 +328,7 @@ A_AWARD_NOTICE = (465, 600, 590, 718)
 A_AWARD_1ST_ICON = (1100, 284, 1212, 394)
 A_INSTANCE_TITLE = (690, 100, 1250, 600)
 A_FRIEND_OPTIONS_BAR = (726, 92, 1278, 166)
-A_FRIEND_SHOW_BUTTONS = (824, 40, 964, 590)
+A_FRIEND_SHOW_BUTTONS = (800, 20, 980, 620)
 A_SWIPE_FRIEND_OPTION_DOWN = (950, 500, 950, 100)
 A_FRIEND_CLASSES = (45, 89, 741, 166)
 A_FRIEND_ICONS = (28, 165, 235, 718)

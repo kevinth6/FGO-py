@@ -70,8 +70,10 @@ class Farming:
         except Exception as e:
             logger.exception(e)
             return 0
+
 farming=Farming()
-threading.Thread(target=farming,daemon=True,name='Farming').start()
+# [Tulkas] disable farming
+# threading.Thread(target=farming,daemon=True,name='Farming').start()
 def setup():
     raise NotImplementedError
     if not fgoDevice.device.isInGame():
