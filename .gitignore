@@ -18,6 +18,8 @@ Capture*.png
 SpecialDrop*.png
 Screenshot*.png
 SummonHistory(*.png
+Exception*.png
+Screenshot.png
 Log*.txt
 fgoConfig.json
 tksConfig.yaml
@@ -28,3 +30,4 @@ tksDaemon.yaml
 tksResult/
 fgoLog/
 fgoCom/
+fgoFuse/
